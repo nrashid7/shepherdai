@@ -167,6 +167,33 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_devotionals: {
+        Row: {
+          created_at: string | null
+          days_count: number
+          devotional_json: Json
+          id: string
+          topic: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          days_count: number
+          devotional_json: Json
+          id?: string
+          topic: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          days_count?: number
+          devotional_json?: Json
+          id?: string
+          topic?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       saved_verses: {
         Row: {
           created_at: string
