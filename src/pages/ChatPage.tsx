@@ -52,20 +52,23 @@ const ChatPage = () => {
     }
   }, [searchParams]);
 
-  // Load a random memory hint
+  const [userMemories, setUserMemories] = useState<any[]>([]);
+
+  // Load memories for hint + chat context
   useEffect(() => {
-    if (user && messages.length === 0) loadMemoryHint();
+    if (user && messages.length === 0) loadMemories();
   }, [user]);
 
-  const loadMemoryHint = async () => {
+  const loadMemories = async () => {
     if (!user) return;
     const { data } = await supabase
       .from("user_memories")
-      .select("theme, verse_reference")
+      .select("theme, verse_reference, frequency, note")
       .eq("user_id", user.id)
       .order("frequency", { ascending: false })
       .limit(5);
     if (data && data.length > 0) {
+      setUserMemories(data);
       const pick = data[Math.floor(Math.random() * data.length)];
       setMemoryHint(`You've explored ${pick.theme} before with ${pick.verse_reference}. It might encourage you today.`);
     }
@@ -128,6 +131,7 @@ const ChatPage = () => {
     try {
       await streamChat({
         messages: chatMessages,
+        user_memories: userMemories.length > 0 ? userMemories : undefined,
         onDelta: (chunk) => {
           assistantSoFar += chunk;
           setMessages((prev) => {

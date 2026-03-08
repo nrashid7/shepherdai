@@ -49,7 +49,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages } = await req.json();
+    const { messages, user_memories } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -95,7 +95,18 @@ serve(async (req) => {
       console.error("RAG retrieval error (non-fatal):", ragErr);
     }
 
-    const systemPrompt = BASE_SYSTEM_PROMPT + ragContext;
+    // Inject user memories for personalization
+    let memoryContext = "";
+    if (user_memories && Array.isArray(user_memories) && user_memories.length > 0) {
+      memoryContext = "\n\n--- USER SPIRITUAL CONTEXT ---\nThis user has previously explored these themes:";
+      for (const m of user_memories) {
+        memoryContext += `\n- ${m.theme}: ${m.verse_reference} (referenced ${m.frequency} times)`;
+        if (m.note) memoryContext += ` — "${m.note}"`;
+      }
+      memoryContext += "\nYou may reference these past themes when relevant to provide continuity.\n--- END USER CONTEXT ---\n";
+    }
+
+    const systemPrompt = BASE_SYSTEM_PROMPT + ragContext + memoryContext;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
