@@ -1,15 +1,26 @@
-import { Link, useLocation } from "react-router-dom";
-import { BookOpen, MessageCircle, Heart, LayoutDashboard } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { BookOpen, MessageCircle, Heart, LayoutDashboard, FileText, LogIn, LogOut, User } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const navItems = [
   { path: "/", label: "Home", icon: BookOpen },
   { path: "/chat", label: "Chat", icon: MessageCircle },
   { path: "/prayer", label: "Prayer", icon: Heart },
+  { path: "/devotional", label: "Devotional", icon: FileText },
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
 ];
 
 const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Signed out");
+    navigate("/");
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
@@ -30,7 +41,7 @@ const Navbar = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   isActive
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -41,26 +52,53 @@ const Navbar = () => {
               </Link>
             );
           })}
+
+          <div className="ml-2 border-l border-border pl-2">
+            {user ? (
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </button>
+            ) : (
+              <Link
+                to="/auth"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+              >
+                <LogIn className="h-4 w-4" />
+                Sign In
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Mobile nav */}
         <div className="flex items-center gap-1 md:hidden">
-          {navItems.map((item) => {
+          {navItems.slice(1, 4).map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 className={`rounded-lg p-2 transition-colors ${
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground"
+                  isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <item.icon className="h-5 w-5" />
               </Link>
             );
           })}
+          {user ? (
+            <button onClick={handleSignOut} className="rounded-lg p-2 text-muted-foreground hover:text-foreground">
+              <LogOut className="h-5 w-5" />
+            </button>
+          ) : (
+            <Link to="/auth" className="rounded-lg p-2 text-muted-foreground hover:text-foreground">
+              <LogIn className="h-5 w-5" />
+            </Link>
+          )}
         </div>
       </div>
     </nav>
