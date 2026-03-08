@@ -1,13 +1,16 @@
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 type Msg = { role: "user" | "assistant"; content: string };
+type Memory = { theme: string; verse_reference: string; frequency: number; note?: string | null };
 
 export async function streamChat({
   messages,
+  user_memories,
   onDelta,
   onDone,
 }: {
   messages: Msg[];
+  user_memories?: Memory[];
   onDelta: (deltaText: string) => void;
   onDone: () => void;
 }) {
@@ -17,7 +20,7 @@ export async function streamChat({
       "Content-Type": "application/json",
       Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
-    body: JSON.stringify({ messages }),
+    body: JSON.stringify({ messages, user_memories }),
   });
 
   if (!resp.ok || !resp.body) {

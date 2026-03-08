@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import ErrorBoundary from "./components/ErrorBoundary";
+import AuthGuard from "./components/AuthGuard";
 import Navbar from "./components/Navbar";
 import Index from "./pages/Index";
 import ChatPage from "./pages/ChatPage";
@@ -24,18 +26,20 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Navbar />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/chat" element={<ChatPage />} />
-            <Route path="/prayer" element={<PrayerPage />} />
-            <Route path="/devotional" element={<DevotionalPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/verse" element={<VersePage />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <ErrorBoundary>
+            <Navbar />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/chat" element={<ChatPage />} />
+              <Route path="/prayer" element={<PrayerPage />} />
+              <Route path="/devotional" element={<DevotionalPage />} />
+              <Route path="/dashboard" element={<AuthGuard><DashboardPage /></AuthGuard>} />
+              <Route path="/verse" element={<VersePage />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/settings" element={<AuthGuard><SettingsPage /></AuthGuard>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ErrorBoundary>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

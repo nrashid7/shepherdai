@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PrayerCardModal } from "@/components/PrayerCard";
 
 interface SavedVerse {
@@ -51,13 +52,16 @@ const DashboardPage = () => {
   const [editingVerseId, setEditingVerseId] = useState<string | null>(null);
   const [editNote, setEditNote] = useState("");
   const [expandedConvo, setExpandedConvo] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    document.title = "Dashboard — Shepherd AI";
     if (user) loadData();
   }, [user]);
 
   const loadData = async () => {
     if (!user) return;
+    setIsLoading(true);
     const [versesRes, prayersRes, memoriesRes, convosRes, checkinsRes] = await Promise.all([
       supabase.from("saved_verses").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase.from("prayer_journal").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(10),
@@ -84,6 +88,7 @@ const DashboardPage = () => {
       }
       setCheckinStreak(streak);
     }
+    setIsLoading(false);
   };
 
   const deleteVerse = async (id: string) => {
@@ -111,16 +116,24 @@ const DashboardPage = () => {
     }
   };
 
-  if (!user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center pt-16">
-        <div className="text-center">
-          <h2 className="mb-2 font-display text-2xl font-bold text-foreground">Sign in to view your journey</h2>
-          <p className="font-body text-muted-foreground">Your saved verses, prayers, and spiritual themes will appear here.</p>
+  const LoadingSkeleton = () => (
+    <div className="grid gap-6 lg:grid-cols-3">
+      <div className="lg:col-span-2 rounded-xl border border-border bg-card p-6">
+        <Skeleton className="mb-4 h-6 w-40" />
+        <div className="flex flex-wrap gap-3">
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-20 w-36 rounded-lg" />)}
         </div>
       </div>
-    );
-  }
+      <div className="rounded-xl border border-border bg-card p-6">
+        <Skeleton className="mb-4 h-6 w-32" />
+        {[1, 2, 3].map((i) => <Skeleton key={i} className="mb-3 h-16 w-full rounded-lg" />)}
+      </div>
+      <div className="lg:col-span-3 rounded-xl border border-border bg-card p-6">
+        <Skeleton className="mb-4 h-6 w-48" />
+        {[1, 2].map((i) => <Skeleton key={i} className="mb-3 h-20 w-full rounded-lg" />)}
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen pb-20 pt-16 md:pb-0">
@@ -129,6 +142,8 @@ const DashboardPage = () => {
           <h1 className="mb-2 font-display text-3xl font-bold text-foreground">Your Spiritual Journey</h1>
           <p className="font-body text-muted-foreground">A reflection of your walk with scripture and prayer.</p>
         </motion.div>
+
+        {isLoading ? <LoadingSkeleton /> : <>
 
         {/* Streak + Stats */}
         {checkinStreak > 0 && (
@@ -302,6 +317,7 @@ const DashboardPage = () => {
             )}
           </motion.div>
         </div>
+        </>}
       </div>
 
       {cardData && <PrayerCardModal {...cardData} onClose={() => setCardData(null)} />}
