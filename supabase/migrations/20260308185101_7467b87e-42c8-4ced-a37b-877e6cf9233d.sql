@@ -1,0 +1,1 @@
+CREATE POLICY "Users can delete their own memories" ON public.user_memories FOR DELETE TO authenticated USING (auth.uid() = user_id);
