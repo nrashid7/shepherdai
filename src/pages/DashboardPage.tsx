@@ -143,7 +143,7 @@ const DashboardPage = () => {
           <p className="font-body text-muted-foreground">A reflection of your walk with scripture and prayer.</p>
         </motion.div>
 
-        {isLoading ? <LoadingSkeleton /> : <></>
+        {isLoading ? <LoadingSkeleton /> : <>
 
         {/* Streak + Stats */}
         {checkinStreak > 0 && (
