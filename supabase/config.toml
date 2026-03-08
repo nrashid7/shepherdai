@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.verse-context]
 verify_jwt = false
+
+[functions.embed-bible]
+verify_jwt = false

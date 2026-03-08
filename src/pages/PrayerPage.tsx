@@ -66,6 +66,7 @@ const PrayerPage = () => {
       const result = await generatePrayer(emotion);
       setPrayer(result);
       if (user) {
+        // Save to prayer journal
         await supabase.from("prayer_journal").insert({
           user_id: user.id,
           emotion,
@@ -73,6 +74,11 @@ const PrayerPage = () => {
           prayer_text: result.prayer,
           reflection: result.reflection,
         });
+        // Also record daily check-in
+        await supabase.from("daily_checkins" as any).insert({
+          user_id: user.id,
+          emotion,
+        } as any);
         loadJournal();
       }
     } catch (e: any) {
@@ -83,7 +89,7 @@ const PrayerPage = () => {
   };
 
   return (
-    <div className="min-h-screen pt-16">
+    <div className="min-h-screen pb-20 pt-16 md:pb-0">
       <div className="container mx-auto max-w-2xl px-4 py-12">
         <motion.div className="mb-8 text-center" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl gradient-gold shadow-soft">

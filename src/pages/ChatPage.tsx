@@ -203,7 +203,7 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col pt-16">
+    <div className="flex h-[calc(100vh-4rem)] flex-col pb-16 pt-16 md:pb-0">
       <div className="flex-1 overflow-y-auto">
         {showCrisisBanner && (
           <div className="px-4 pt-4">
