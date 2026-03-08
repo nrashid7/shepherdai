@@ -14,7 +14,153 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      conversations: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          response: string
+          themes: string[] | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          response: string
+          themes?: string[] | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          response?: string
+          themes?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      prayer_journal: {
+        Row: {
+          created_at: string
+          emotion: string
+          id: string
+          prayer_text: string
+          reflection: string | null
+          user_id: string
+          verse_reference: string
+        }
+        Insert: {
+          created_at?: string
+          emotion: string
+          id?: string
+          prayer_text: string
+          reflection?: string | null
+          user_id: string
+          verse_reference: string
+        }
+        Update: {
+          created_at?: string
+          emotion?: string
+          id?: string
+          prayer_text?: string
+          reflection?: string | null
+          user_id?: string
+          verse_reference?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      saved_verses: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          theme: string | null
+          user_id: string
+          verse_reference: string
+          verse_text: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          theme?: string | null
+          user_id: string
+          verse_reference: string
+          verse_text: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          theme?: string | null
+          user_id?: string
+          verse_reference?: string
+          verse_text?: string
+        }
+        Relationships: []
+      }
+      user_memories: {
+        Row: {
+          created_at: string
+          frequency: number
+          id: string
+          note: string | null
+          theme: string
+          updated_at: string
+          user_id: string
+          verse_reference: string
+        }
+        Insert: {
+          created_at?: string
+          frequency?: number
+          id?: string
+          note?: string | null
+          theme: string
+          updated_at?: string
+          user_id: string
+          verse_reference: string
+        }
+        Update: {
+          created_at?: string
+          frequency?: number
+          id?: string
+          note?: string | null
+          theme?: string
+          updated_at?: string
+          user_id?: string
+          verse_reference?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
