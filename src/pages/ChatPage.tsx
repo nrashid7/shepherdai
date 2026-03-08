@@ -1,12 +1,15 @@
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, BookOpen, Sparkles, Bookmark } from "lucide-react";
+import { Send, BookOpen, Sparkles, Bookmark, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { streamChat } from "@/lib/ai";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { extractVerseRefs, extractThemes, upsertMemories } from "@/lib/memories";
+import { detectCrisis, CrisisBanner } from "@/components/CrisisBanner";
 
 interface Message {
   id: string;
@@ -27,46 +30,89 @@ const ChatPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showCrisisBanner, setShowCrisisBanner] = useState(false);
+  const [memoryHint, setMemoryHint] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialPromptHandled = useRef(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Auto-send prompt from query params
+  useEffect(() => {
+    if (initialPromptHandled.current) return;
+    const prompt = searchParams.get("prompt");
+    if (prompt) {
+      initialPromptHandled.current = true;
+      setSearchParams({}, { replace: true });
+      handleSend(prompt);
+    }
+  }, [searchParams]);
+
+  // Load a random memory hint
+  useEffect(() => {
+    if (user && messages.length === 0) loadMemoryHint();
+  }, [user]);
+
+  const loadMemoryHint = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("user_memories")
+      .select("theme, verse_reference")
+      .eq("user_id", user.id)
+      .order("frequency", { ascending: false })
+      .limit(5);
+    if (data && data.length > 0) {
+      const pick = data[Math.floor(Math.random() * data.length)];
+      setMemoryHint(`You've explored ${pick.theme} before with ${pick.verse_reference}. It might encourage you today.`);
+    }
+  };
+
   const saveConversation = async (userMsg: string, response: string) => {
     if (!user) return;
     try {
+      const themes = extractThemes(userMsg);
       await supabase.from("conversations").insert({
         user_id: user.id,
         message: userMsg,
         response,
-        themes: extractThemes(userMsg),
+        themes,
       });
+      // Populate spiritual memories
+      await upsertMemories(user.id, userMsg, response);
     } catch (e) {
       console.error("Failed to save conversation:", e);
     }
   };
 
-  const extractThemes = (text: string): string[] => {
-    const themeKeywords: Record<string, string[]> = {
-      anxiety: ["anxious", "anxiety", "worried", "worry", "fear", "afraid"],
-      forgiveness: ["forgiv", "forgiveness", "grudge", "resentment"],
-      guidance: ["guidance", "decision", "direction", "lost", "confused"],
-      hope: ["hope", "hopeful", "future", "promise"],
-      grief: ["grief", "loss", "death", "mourning", "sad"],
-      anger: ["angry", "anger", "frustrated", "rage"],
-      gratitude: ["grateful", "thankful", "gratitude", "blessed"],
-    };
-    const lower = text.toLowerCase();
-    return Object.entries(themeKeywords)
-      .filter(([, keywords]) => keywords.some((k) => lower.includes(k)))
-      .map(([theme]) => theme);
+  const handleSaveVerse = async (reference: string, text: string) => {
+    if (!user) {
+      toast.error("Sign in to save verses");
+      return;
+    }
+    try {
+      await supabase.from("saved_verses").insert({
+        user_id: user.id,
+        verse_reference: reference,
+        verse_text: text,
+      });
+      toast.success(`Saved ${reference}`);
+    } catch {
+      toast.error("Failed to save verse");
+    }
   };
 
   const handleSend = async (text?: string) => {
     const messageText = text || input.trim();
     if (!messageText || isLoading) return;
+
+    // Crisis detection
+    if (detectCrisis(messageText)) {
+      setShowCrisisBanner(true);
+    }
 
     const userMsg: Message = { id: Date.now().toString(), role: "user", content: messageText };
     setMessages((prev) => [...prev, userMsg]);
@@ -105,23 +151,6 @@ const ChatPage = () => {
     }
   };
 
-  const handleSaveVerse = async (reference: string, text: string) => {
-    if (!user) {
-      toast.error("Sign in to save verses");
-      return;
-    }
-    try {
-      await supabase.from("saved_verses").insert({
-        user_id: user.id,
-        verse_reference: reference,
-        verse_text: text,
-      });
-      toast.success(`Saved ${reference}`);
-    } catch {
-      toast.error("Failed to save verse");
-    }
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -129,9 +158,59 @@ const ChatPage = () => {
     }
   };
 
+  // Render verse references as clickable links with save buttons
+  const renderAssistantContent = (content: string) => {
+    return (
+      <ReactMarkdown
+        components={{
+          strong: ({ children }) => {
+            const text = String(children);
+            // Check if this looks like a Bible reference
+            const verseMatch = text.match(/^([1-3]?\s?[A-Z][a-z]+(?:\s[A-Z][a-z]+)?\s\d+:\d+(?:-\d+)?)$/);
+            if (verseMatch) {
+              const ref = verseMatch[1];
+              return (
+                <span className="inline-flex items-center gap-1">
+                  <Link
+                    to={`/verse?ref=${encodeURIComponent(ref)}`}
+                    className="font-bold text-primary hover:underline"
+                  >
+                    {ref}
+                    <ExternalLink className="ml-0.5 inline h-3 w-3" />
+                  </Link>
+                  {user && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleSaveVerse(ref, "");
+                      }}
+                      className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-primary"
+                      title="Save verse"
+                    >
+                      <Bookmark className="h-3 w-3" />
+                    </button>
+                  )}
+                </span>
+              );
+            }
+            return <strong>{children}</strong>;
+          },
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    );
+  };
+
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col pt-16">
       <div className="flex-1 overflow-y-auto">
+        {showCrisisBanner && (
+          <div className="px-4 pt-4">
+            <CrisisBanner onDismiss={() => setShowCrisisBanner(false)} />
+          </div>
+        )}
+
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center px-4">
             <motion.div
@@ -149,6 +228,16 @@ const ChatPage = () => {
               <p className="mb-8 max-w-md font-body text-muted-foreground">
                 Share your thoughts, struggles, or questions. I'll guide you with scripture and prayer.
               </p>
+
+              {memoryHint && (
+                <div className="mx-auto mb-6 max-w-md rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+                  <p className="font-body text-sm text-primary">
+                    <Sparkles className="mr-1 inline h-3 w-3" />
+                    {memoryHint}
+                  </p>
+                </div>
+              )}
+
               <div className="flex flex-wrap justify-center gap-2">
                 {quickPrompts.map((prompt) => (
                   <button
@@ -187,7 +276,7 @@ const ChatPage = () => {
                         </span>
                       </div>
                       <div className="prose prose-sm max-w-none font-body text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-em:text-muted-foreground prose-blockquote:border-l-primary/40 prose-blockquote:text-muted-foreground">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        {renderAssistantContent(msg.content)}
                       </div>
                     </div>
                   )}
