@@ -19,6 +19,7 @@ export type Database = {
           book: string
           chapter: number
           embedding: string | null
+          fts: unknown
           id: string
           text: string
           verse_number: number
@@ -27,6 +28,7 @@ export type Database = {
           book: string
           chapter: number
           embedding?: string | null
+          fts?: unknown
           id?: string
           text: string
           verse_number: number
@@ -35,6 +37,7 @@ export type Database = {
           book?: string
           chapter?: number
           embedding?: string | null
+          fts?: unknown
           id?: string
           text?: string
           verse_number?: number
@@ -287,6 +290,17 @@ export type Database = {
           chapter: number
           id: string
           similarity: number
+          text: string
+          verse_number: number
+        }[]
+      }
+      search_verses: {
+        Args: { match_count?: number; query: string }
+        Returns: {
+          book: string
+          chapter: number
+          id: string
+          rank: number
           text: string
           verse_number: number
         }[]
