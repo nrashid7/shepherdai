@@ -1,13 +1,17 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, BookOpen, Sparkles } from "lucide-react";
+import { Send, BookOpen, Sparkles, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { streamChat } from "@/lib/ai";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  verses?: { reference: string; text: string }[];
 }
 
 const quickPrompts = [
@@ -19,72 +23,103 @@ const quickPrompts = [
   "I'm feeling grateful today",
 ];
 
-// Demo response for now — will be replaced with real AI
-const demoResponse: Message = {
-  id: "demo-1",
-  role: "assistant",
-  content: `I hear you, and I want you to know that what you're feeling is valid. God sees your heart and walks with you through every anxious moment.
-
-**Scripture for You:**
-
-> **Isaiah 41:10** — "So do not fear, for I am with you; do not be dismayed, for I am your God. I will strengthen you and help you; I will uphold you with my righteous right hand."
-
-> **Philippians 4:6-7** — "Do not be anxious about anything, but in every situation, by prayer and petition, with thanksgiving, present your requests to God. And the peace of God, which transcends all understanding, will guard your hearts and your minds in Christ Jesus."
-
-**Understanding the Passages:**
-Isaiah reminds us that God's presence is not conditional on our circumstances. The command "do not fear" is paired with a promise — He will strengthen and uphold you. Paul's letter to the Philippians gives us a practical path: bring your worries to God in prayer, and His peace will guard your heart.
-
-**Cross-Reference:** Psalm 55:22 — "Cast your cares on the Lord and he will sustain you."
-
-**Reflection:** What is one specific worry you can release to God in prayer right now?
-
-**Prayer:**
-*Heavenly Father, I bring my anxious thoughts before You. You know every concern weighing on my heart. Strengthen me with Your presence and help me trust in Your plan. Fill me with the peace that surpasses all understanding. In Jesus' name, Amen.* 🙏`,
-  verses: [
-    {
-      reference: "Isaiah 41:10",
-      text: "So do not fear, for I am with you; do not be dismayed, for I am your God.",
-    },
-    {
-      reference: "Philippians 4:6-7",
-      text: "Do not be anxious about anything, but in every situation, by prayer and petition, with thanksgiving, present your requests to God.",
-    },
-  ],
-};
-
 const ChatPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const saveConversation = async (userMsg: string, response: string) => {
+    if (!user) return;
+    try {
+      await supabase.from("conversations").insert({
+        user_id: user.id,
+        message: userMsg,
+        response,
+        themes: extractThemes(userMsg),
+      });
+    } catch (e) {
+      console.error("Failed to save conversation:", e);
+    }
+  };
+
+  const extractThemes = (text: string): string[] => {
+    const themeKeywords: Record<string, string[]> = {
+      anxiety: ["anxious", "anxiety", "worried", "worry", "fear", "afraid"],
+      forgiveness: ["forgiv", "forgiveness", "grudge", "resentment"],
+      guidance: ["guidance", "decision", "direction", "lost", "confused"],
+      hope: ["hope", "hopeful", "future", "promise"],
+      grief: ["grief", "loss", "death", "mourning", "sad"],
+      anger: ["angry", "anger", "frustrated", "rage"],
+      gratitude: ["grateful", "thankful", "gratitude", "blessed"],
+    };
+    const lower = text.toLowerCase();
+    return Object.entries(themeKeywords)
+      .filter(([, keywords]) => keywords.some((k) => lower.includes(k)))
+      .map(([theme]) => theme);
+  };
+
   const handleSend = async (text?: string) => {
     const messageText = text || input.trim();
     if (!messageText || isLoading) return;
 
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: messageText,
-    };
-
+    const userMsg: Message = { id: Date.now().toString(), role: "user", content: messageText };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setIsLoading(true);
 
-    // Simulate AI response delay
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        { ...demoResponse, id: Date.now().toString() },
-      ]);
+    let assistantSoFar = "";
+    const chatMessages = [...messages, userMsg].map((m) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+    }));
+
+    try {
+      await streamChat({
+        messages: chatMessages,
+        onDelta: (chunk) => {
+          assistantSoFar += chunk;
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "assistant") {
+              return prev.map((m, i) =>
+                i === prev.length - 1 ? { ...m, content: assistantSoFar } : m
+              );
+            }
+            return [...prev, { id: `ai-${Date.now()}`, role: "assistant", content: assistantSoFar }];
+          });
+        },
+        onDone: () => {
+          setIsLoading(false);
+          saveConversation(messageText, assistantSoFar);
+        },
+      });
+    } catch (e: any) {
+      toast.error(e.message || "Failed to get response");
       setIsLoading(false);
-    }, 1500);
+    }
+  };
+
+  const handleSaveVerse = async (reference: string, text: string) => {
+    if (!user) {
+      toast.error("Sign in to save verses");
+      return;
+    }
+    try {
+      await supabase.from("saved_verses").insert({
+        user_id: user.id,
+        verse_reference: reference,
+        verse_text: text,
+      });
+      toast.success(`Saved ${reference}`);
+    } catch {
+      toast.error("Failed to save verse");
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -96,7 +131,6 @@ const ChatPage = () => {
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col pt-16">
-      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center px-4">
@@ -113,10 +147,8 @@ const ChatPage = () => {
                 What's on your heart?
               </h2>
               <p className="mb-8 max-w-md font-body text-muted-foreground">
-                Share your thoughts, struggles, or questions. I'll guide you with
-                scripture and prayer.
+                Share your thoughts, struggles, or questions. I'll guide you with scripture and prayer.
               </p>
-
               <div className="flex flex-wrap justify-center gap-2">
                 {quickPrompts.map((prompt) => (
                   <button
@@ -154,45 +186,8 @@ const ChatPage = () => {
                           Shepherd AI
                         </span>
                       </div>
-                      <div className="prose prose-sm max-w-none font-body text-foreground">
-                        {msg.content.split("\n").map((line, i) => {
-                          if (line.startsWith("**") && line.endsWith("**")) {
-                            return (
-                              <p key={i} className="mb-2 mt-4 font-semibold text-foreground">
-                                {line.replace(/\*\*/g, "")}
-                              </p>
-                            );
-                          }
-                          if (line.startsWith("> **")) {
-                            const parts = line.replace(/^> \*\*/, "").split("**");
-                            return (
-                              <blockquote
-                                key={i}
-                                className="my-2 border-l-2 border-primary/40 pl-4"
-                              >
-                                <span className="font-semibold text-primary">
-                                  {parts[0]}
-                                </span>
-                                <span className="text-muted-foreground">
-                                  {parts[1]?.replace(/^ — /, " — ")}
-                                </span>
-                              </blockquote>
-                            );
-                          }
-                          if (line.startsWith("*") && line.endsWith("*")) {
-                            return (
-                              <p key={i} className="my-2 italic text-muted-foreground">
-                                {line.replace(/^\*|\*$/g, "")}
-                              </p>
-                            );
-                          }
-                          if (line.trim() === "") return <br key={i} />;
-                          return (
-                            <p key={i} className="mb-2 leading-relaxed text-foreground">
-                              {line.replace(/\*\*(.*?)\*\*/g, "$1")}
-                            </p>
-                          );
-                        })}
+                      <div className="prose prose-sm max-w-none font-body text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-em:text-muted-foreground prose-blockquote:border-l-primary/40 prose-blockquote:text-muted-foreground">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
                       </div>
                     </div>
                   )}
@@ -200,7 +195,7 @@ const ChatPage = () => {
               ))}
             </AnimatePresence>
 
-            {isLoading && (
+            {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -216,18 +211,15 @@ const ChatPage = () => {
                 </div>
               </motion.div>
             )}
-
             <div ref={messagesEndRef} />
           </div>
         )}
       </div>
 
-      {/* Input Area */}
       <div className="border-t border-border bg-background/80 backdrop-blur-md">
         <div className="container mx-auto max-w-3xl px-4 py-4">
           <div className="flex items-end gap-3 rounded-xl border border-border bg-card p-2 shadow-card">
             <textarea
-              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
