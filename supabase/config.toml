@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.devotional]
 verify_jwt = false
+
+[functions.verse-context]
+verify_jwt = false

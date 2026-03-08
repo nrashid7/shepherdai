@@ -10,6 +10,7 @@ import ChatPage from "./pages/ChatPage";
 import PrayerPage from "./pages/PrayerPage";
 import DashboardPage from "./pages/DashboardPage";
 import DevotionalPage from "./pages/DevotionalPage";
+import VersePage from "./pages/VersePage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/prayer" element={<PrayerPage />} />
             <Route path="/devotional" element={<DevotionalPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/verse" element={<VersePage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
