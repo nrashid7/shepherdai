@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      bible_verses: {
+        Row: {
+          book: string
+          chapter: number
+          embedding: string | null
+          id: string
+          text: string
+          verse_number: number
+        }
+        Insert: {
+          book: string
+          chapter: number
+          embedding?: string | null
+          id?: string
+          text: string
+          verse_number: number
+        }
+        Update: {
+          book?: string
+          chapter?: number
+          embedding?: string | null
+          id?: string
+          text?: string
+          verse_number?: number
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           created_at: string
@@ -37,6 +64,48 @@ export type Database = {
           message?: string
           response?: string
           themes?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      cross_references: {
+        Row: {
+          from_verse: string
+          id: string
+          to_verse: string
+          weight: number | null
+        }
+        Insert: {
+          from_verse: string
+          id?: string
+          to_verse: string
+          weight?: number | null
+        }
+        Update: {
+          from_verse?: string
+          id?: string
+          to_verse?: string
+          weight?: number | null
+        }
+        Relationships: []
+      }
+      daily_checkins: {
+        Row: {
+          created_at: string | null
+          emotion: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          emotion: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          emotion?: string
+          id?: string
           user_id?: string
         }
         Relationships: []
@@ -128,6 +197,24 @@ export type Database = {
         }
         Relationships: []
       }
+      study_notes: {
+        Row: {
+          id: string
+          note_text: string
+          verse_reference: string
+        }
+        Insert: {
+          id?: string
+          note_text: string
+          verse_reference: string
+        }
+        Update: {
+          id?: string
+          note_text?: string
+          verse_reference?: string
+        }
+        Relationships: []
+      }
       user_memories: {
         Row: {
           created_at: string
@@ -166,7 +253,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      match_verses: {
+        Args: { match_count?: number; query_embedding: string }
+        Returns: {
+          book: string
+          chapter: number
+          id: string
+          similarity: number
+          text: string
+          verse_number: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
