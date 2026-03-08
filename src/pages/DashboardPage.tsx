@@ -318,6 +318,7 @@ const DashboardPage = () => {
           </motion.div>
         </div>
         </>}
+      </div>
 
       {cardData && <PrayerCardModal {...cardData} onClose={() => setCardData(null)} />}
     </div>
