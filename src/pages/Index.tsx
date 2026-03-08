@@ -84,7 +84,7 @@ const Index = () => {
             {suggestedPrompts.map((prompt) => (
               <Link
                 key={prompt.text}
-                to="/chat"
+                to={`/chat?prompt=${encodeURIComponent(prompt.text)}`}
                 className="flex items-center gap-2 rounded-full border border-border bg-card/80 px-5 py-2.5 font-body text-sm text-foreground shadow-card backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-soft"
               >
                 <span>{prompt.icon}</span>
