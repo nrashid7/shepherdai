@@ -98,7 +98,7 @@ const DevotionalPage = () => {
   };
 
   return (
-    <div className="min-h-screen pt-16">
+    <div className="min-h-screen pb-20 pt-16 md:pb-0">
       <div className="container mx-auto max-w-2xl px-4 py-12">
         <motion.div className="mb-10 text-center" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl gradient-gold shadow-soft">

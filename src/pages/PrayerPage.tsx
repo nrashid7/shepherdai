@@ -43,6 +43,8 @@ const PrayerPage = () => {
   const [cardData, setCardData] = useState<{ verse_reference: string; verse_text: string; prayer?: string; reflection?: string } | null>(null);
   const { user } = useAuth();
 
+  useEffect(() => { document.title = "Prayer — Shepherd AI"; }, []);
+
   useEffect(() => {
     if (user) loadJournal();
   }, [user]);
