@@ -109,6 +109,8 @@ const ExplorePage = () => {
   const [loading, setLoading] = useState(false);
   const [savedVerseRefs, setSavedVerseRefs] = useState<Set<string>>(new Set());
   const [savingVerse, setSavingVerse] = useState(false);
+  const [quickJumpQuery, setQuickJumpQuery] = useState("");
+  const [pendingVerse, setPendingVerse] = useState<number | null>(null);
 
   const bookData = BIBLE_BOOKS.find((b) => b.name === selectedBook);
   const filteredBooks = BIBLE_BOOKS.filter((b) =>
