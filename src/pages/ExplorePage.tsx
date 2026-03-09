@@ -299,6 +299,22 @@ const ExplorePage = () => {
               </p>
             </div>
           </div>
+          {/* Quick Jump */}
+          <form onSubmit={handleQuickJump} className="mt-4 flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Jump to verse… e.g. John 3:16"
+                value={quickJumpQuery}
+                onChange={(e) => setQuickJumpQuery(e.target.value)}
+                className="pl-9 bg-card border-border"
+                maxLength={50}
+              />
+            </div>
+            <Button type="submit" size="default" variant="secondary" disabled={!quickJumpQuery.trim()}>
+              Go
+            </Button>
+          </form>
         </div>
 
         <AnimatePresence mode="wait">
