@@ -109,6 +109,8 @@ const ExplorePage = () => {
   const [loading, setLoading] = useState(false);
   const [savedVerseRefs, setSavedVerseRefs] = useState<Set<string>>(new Set());
   const [savingVerse, setSavingVerse] = useState(false);
+  const [quickJumpQuery, setQuickJumpQuery] = useState("");
+  const [pendingVerse, setPendingVerse] = useState<number | null>(null);
 
   const bookData = BIBLE_BOOKS.find((b) => b.name === selectedBook);
   const filteredBooks = BIBLE_BOOKS.filter((b) =>
@@ -172,6 +174,15 @@ const ExplorePage = () => {
     setCrossRefs(data || []);
   }, []);
 
+  // Auto-select verse after quick-jump navigation
+  useEffect(() => {
+    if (pendingVerse && verses.length > 0 && !loading) {
+      const target = verses.find((v) => v.verse_number === pendingVerse);
+      if (target) loadCrossRefs(target);
+      setPendingVerse(null);
+    }
+  }, [pendingVerse, verses, loading, loadCrossRefs]);
+
   const getStudyNoteForVerse = (verseNum: number) =>
     studyNotes.find((n) => n.verse_reference === `${selectedBook} ${selectedChapter}:${verseNum}`);
 
@@ -209,6 +220,35 @@ const ExplorePage = () => {
     } finally {
       setSavingVerse(false);
     }
+  };
+
+  const parseReference = (input: string): { book: string; chapter: number; verse?: number } | null => {
+    const trimmed = input.trim();
+    // Match patterns like "John 3:16", "1 Corinthians 13", "Genesis 1:1"
+    const match = trimmed.match(/^(\d?\s?[A-Za-z\s]+?)\s+(\d+)(?::(\d+))?$/);
+    if (!match) return null;
+    const rawBook = match[1].trim();
+    const chapter = parseInt(match[2], 10);
+    const verse = match[3] ? parseInt(match[3], 10) : undefined;
+    // Find matching book (case-insensitive)
+    const found = BIBLE_BOOKS.find(
+      (b) => b.name.toLowerCase() === rawBook.toLowerCase()
+    );
+    if (!found || chapter < 1 || chapter > found.chapters) return null;
+    return { book: found.name, chapter, verse };
+  };
+
+  const handleQuickJump = (e: React.FormEvent) => {
+    e.preventDefault();
+    const parsed = parseReference(quickJumpQuery);
+    if (!parsed) {
+      toast.error("Invalid reference. Try e.g. \"John 3:16\" or \"Genesis 1\"");
+      return;
+    }
+    setSelectedBook(parsed.book);
+    setSelectedChapter(parsed.chapter);
+    setPendingVerse(parsed.verse ?? null);
+    setQuickJumpQuery("");
   };
 
   const handleBack = () => {
@@ -259,6 +299,22 @@ const ExplorePage = () => {
               </p>
             </div>
           </div>
+          {/* Quick Jump */}
+          <form onSubmit={handleQuickJump} className="mt-4 flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Jump to verse… e.g. John 3:16"
+                value={quickJumpQuery}
+                onChange={(e) => setQuickJumpQuery(e.target.value)}
+                className="pl-9 bg-card border-border"
+                maxLength={50}
+              />
+            </div>
+            <Button type="submit" size="default" variant="secondary" disabled={!quickJumpQuery.trim()}>
+              Go
+            </Button>
+          </form>
         </div>
 
         <AnimatePresence mode="wait">
