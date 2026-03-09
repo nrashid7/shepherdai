@@ -68,7 +68,7 @@ serve(async (req) => {
     // Accept optional parameters for chunked processing
     let startLine = 0;
     let linesPerCall = 10000;
-    let minVotes = 10; // Only import refs with positive votes >= threshold
+    let minVotes = 1; // Import all refs with at least 1 positive vote
     try {
       const body = await req.json();
       if (body.start_line !== undefined) startLine = body.start_line;
