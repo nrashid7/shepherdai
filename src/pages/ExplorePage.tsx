@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Book, ChevronRight, ArrowLeft, Link2, StickyNote, Search, BookOpen } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Book, ChevronRight, ArrowLeft, Link2, StickyNote, Search, BookOpen, Bookmark, BookmarkCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-
+import { toast } from "sonner";
 const BIBLE_BOOKS = [
   { name: "Genesis", chapters: 50, testament: "OT" },
   { name: "Exodus", chapters: 40, testament: "OT" },
