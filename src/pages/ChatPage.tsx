@@ -37,6 +37,8 @@ const ChatPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialPromptHandled = useRef(false);
 
+  useEffect(() => { document.title = "Chat — Shepherd AI"; }, []);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -97,6 +99,17 @@ const ChatPage = () => {
       return;
     }
     try {
+      // Check if already saved to avoid duplicates
+      const { data: existing } = await supabase
+        .from("saved_verses")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("verse_reference", reference)
+        .limit(1);
+      if (existing && existing.length > 0) {
+        toast.info(`${reference} is already saved`);
+        return;
+      }
       await supabase.from("saved_verses").insert({
         user_id: user.id,
         verse_reference: reference,

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { MessageCircle, Heart, BookOpen, Sparkles } from "lucide-react";
@@ -35,6 +36,7 @@ const features = [
 ];
 
 const Index = () => {
+  useEffect(() => { document.title = "Shepherd AI — Scripture for Every Season of Life"; }, []);
   return (
     <div className="min-h-screen">
       {/* Hero Section */}

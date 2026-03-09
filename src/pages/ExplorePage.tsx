@@ -98,6 +98,7 @@ type StudyNote = {
 };
 
 const ExplorePage = () => {
+  useEffect(() => { document.title = "Explore Scripture — Shepherd AI"; }, []);
   const { user } = useAuth();
   const [selectedBook, setSelectedBook] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);

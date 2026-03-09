@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BookOpen, Mail, Lock, User } from "lucide-react";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 const AuthPage = () => {
   const [isSignUp, setIsSignUp] = useState(false);
+  useEffect(() => { document.title = isSignUp ? "Sign Up — Shepherd AI" : "Sign In — Shepherd AI"; }, [isSignUp]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
