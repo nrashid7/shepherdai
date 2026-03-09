@@ -1,11 +1,12 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { BookOpen, MessageCircle, Heart, LayoutDashboard, FileText, LogIn, LogOut, Settings } from "lucide-react";
+import { BookOpen, MessageCircle, Heart, LayoutDashboard, FileText, LogIn, LogOut, Settings, Search } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 const navItems = [
   { path: "/", label: "Home", icon: BookOpen },
   { path: "/chat", label: "Chat", icon: MessageCircle },
+  { path: "/explore", label: "Explore", icon: Search },
   { path: "/prayer", label: "Prayer", icon: Heart },
   { path: "/devotional", label: "Devotional", icon: FileText },
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },

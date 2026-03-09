@@ -13,6 +13,7 @@ import PrayerPage from "./pages/PrayerPage";
 import DashboardPage from "./pages/DashboardPage";
 import DevotionalPage from "./pages/DevotionalPage";
 import VersePage from "./pages/VersePage";
+import ExplorePage from "./pages/ExplorePage";
 import AuthPage from "./pages/AuthPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/devotional" element={<DevotionalPage />} />
               <Route path="/dashboard" element={<AuthGuard><DashboardPage /></AuthGuard>} />
               <Route path="/verse" element={<VersePage />} />
+              <Route path="/explore" element={<ExplorePage />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/settings" element={<AuthGuard><SettingsPage /></AuthGuard>} />
               <Route path="*" element={<NotFound />} />
