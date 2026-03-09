@@ -98,6 +98,7 @@ type StudyNote = {
 };
 
 const ExplorePage = () => {
+  const { user } = useAuth();
   const [selectedBook, setSelectedBook] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [verses, setVerses] = useState<Verse[]>([]);
@@ -106,6 +107,8 @@ const ExplorePage = () => {
   const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [savedVerseRefs, setSavedVerseRefs] = useState<Set<string>>(new Set());
+  const [savingVerse, setSavingVerse] = useState(false);
 
   const bookData = BIBLE_BOOKS.find((b) => b.name === selectedBook);
   const filteredBooks = BIBLE_BOOKS.filter((b) =>
