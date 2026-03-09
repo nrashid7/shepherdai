@@ -117,6 +117,19 @@ const ExplorePage = () => {
   const otBooks = filteredBooks.filter((b) => b.testament === "OT");
   const ntBooks = filteredBooks.filter((b) => b.testament === "NT");
 
+  // Load saved verses for current user
+  useEffect(() => {
+    if (!user) return;
+    const loadSaved = async () => {
+      const { data } = await supabase
+        .from("saved_verses")
+        .select("verse_reference")
+        .eq("user_id", user.id);
+      setSavedVerseRefs(new Set((data || []).map((d) => d.verse_reference)));
+    };
+    loadSaved();
+  }, [user]);
+
   // Load chapter verses
   useEffect(() => {
     if (!selectedBook || !selectedChapter) return;
