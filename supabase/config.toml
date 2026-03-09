@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.seed-study-notes]
 verify_jwt = false
+
+[functions.seed-study-notes-ai]
+verify_jwt = false

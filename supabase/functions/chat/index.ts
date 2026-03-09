@@ -57,6 +57,12 @@ serve(async (req) => {
             .select("*")
             .in("from_verse", verseRefs);
 
+          // Get study notes for matched verses
+          const { data: studyNotes } = await sb
+            .from("study_notes")
+            .select("*")
+            .in("verse_reference", verseRefs);
+
           ragContext = "\n\n--- RETRIEVED SCRIPTURE CONTEXT (use these as primary sources) ---\n";
           for (const v of verses) {
             ragContext += `\n${v.book} ${v.chapter}:${v.verse_number} — "${v.text}"`;
@@ -65,6 +71,12 @@ serve(async (req) => {
             ragContext += "\n\nRelated cross-references:";
             for (const cr of crossRefs) {
               ragContext += `\n- ${cr.from_verse} → ${cr.to_verse}`;
+            }
+          }
+          if (studyNotes && studyNotes.length > 0) {
+            ragContext += "\n\nStudy notes:";
+            for (const sn of studyNotes) {
+              ragContext += `\n- ${sn.verse_reference}: ${sn.note_text}`;
             }
           }
           ragContext += "\n--- END RETRIEVED CONTEXT ---\n";
