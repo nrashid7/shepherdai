@@ -174,6 +174,15 @@ const ExplorePage = () => {
     setCrossRefs(data || []);
   }, []);
 
+  // Auto-select verse after quick-jump navigation
+  useEffect(() => {
+    if (pendingVerse && verses.length > 0 && !loading) {
+      const target = verses.find((v) => v.verse_number === pendingVerse);
+      if (target) loadCrossRefs(target);
+      setPendingVerse(null);
+    }
+  }, [pendingVerse, verses, loading, loadCrossRefs]);
+
   const getStudyNoteForVerse = (verseNum: number) =>
     studyNotes.find((n) => n.verse_reference === `${selectedBook} ${selectedChapter}:${verseNum}`);
 
