@@ -422,6 +422,22 @@ const ExplorePage = () => {
             >
               {/* Verse list */}
               <div className="md:col-span-3">
+                {/* Chapter summary note */}
+                {(() => {
+                  const chapterNote = getStudyNoteForVerse(1);
+                  return chapterNote ? (
+                    <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <StickyNote className="h-4 w-4 text-primary" />
+                        <h3 className="font-display text-sm font-semibold text-foreground">Chapter Overview</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">
+                        {chapterNote.note_text}
+                      </p>
+                    </div>
+                  ) : null;
+                })()}
+
                 {loading ? (
                   <div className="space-y-3">
                     {[1, 2, 3, 4].map((i) => (
@@ -434,33 +450,112 @@ const ExplorePage = () => {
                       {verses.map((verse) => {
                         const isSelected = selectedVerse?.id === verse.id;
                         const hasNote = !!getStudyNoteForVerse(verse.verse_number);
+                        const verseRef = getVerseRef(verse);
+                        const verseNote = getStudyNoteForVerse(verse.verse_number);
+                        const verseCrossRefs = isSelected ? crossRefs : [];
                         return (
-                          <button
-                            key={verse.id}
-                            onClick={() => loadCrossRefs(verse)}
-                            className={`w-full text-left rounded-lg p-3 transition-all ${
-                              isSelected
-                                ? "bg-primary/10 border border-primary/30 shadow-sm"
-                                : "hover:bg-card border border-transparent"
-                            }`}
-                          >
-                            <div className="flex gap-3">
-                              <span className="font-display text-sm font-bold text-primary mt-0.5 flex-shrink-0 w-6 text-right">
-                                {verse.verse_number}
-                              </span>
-                              <div className="min-w-0">
-                                <p className="text-sm text-foreground leading-relaxed font-body">
-                                  {verse.text}
-                                </p>
-                                {hasNote && (
-                                  <div className="mt-1 flex items-center gap-1">
-                                    <StickyNote className="h-3 w-3 text-primary/60" />
-                                    <span className="text-[10px] text-primary/60 font-medium">Study note available</span>
+                          <div key={verse.id}>
+                            <button
+                              onClick={() => loadCrossRefs(verse)}
+                              className={`w-full text-left rounded-lg p-3 transition-all ${
+                                isSelected
+                                  ? "bg-primary/10 border border-primary/30 shadow-sm"
+                                  : "hover:bg-card border border-transparent"
+                              }`}
+                            >
+                              <div className="flex gap-3">
+                                <span className="font-display text-sm font-bold text-primary mt-0.5 flex-shrink-0 w-6 text-right">
+                                  {verse.verse_number}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="text-sm text-foreground leading-relaxed font-body">
+                                    {verse.text}
+                                  </p>
+                                  {hasNote && !isSelected && (
+                                    <div className="mt-1 flex items-center gap-1">
+                                      <StickyNote className="h-3 w-3 text-primary/60" />
+                                      <span className="text-[10px] text-primary/60 font-medium">Study note available</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </button>
+
+                            {/* Inline expansion for mobile */}
+                            {isSelected && (
+                              <div className="md:hidden ml-9 mr-2 mb-2 space-y-3">
+                                {/* Save button */}
+                                <Button
+                                  variant={isVerseSaved(verse) ? "secondary" : "outline"}
+                                  size="sm"
+                                  className="w-full gap-2"
+                                  disabled={savingVerse}
+                                  onClick={() => toggleSaveVerse(verse)}
+                                >
+                                  {isVerseSaved(verse) ? (
+                                    <><BookmarkCheck className="h-4 w-4" /> Saved</>
+                                  ) : (
+                                    <><Bookmark className="h-4 w-4" /> Save Verse</>
+                                  )}
+                                </Button>
+
+                                {/* Study note inline */}
+                                {verseNote && (
+                                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                      <StickyNote className="h-3.5 w-3.5 text-primary" />
+                                      <span className="font-display text-xs font-semibold text-foreground">Study Note</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground leading-relaxed">
+                                      {verseNote.note_text}
+                                    </p>
                                   </div>
                                 )}
+
+                                {/* Cross-references inline */}
+                                <div className="rounded-lg border border-border bg-card p-3">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Link2 className="h-3.5 w-3.5 text-primary" />
+                                    <span className="font-display text-xs font-semibold text-foreground">Cross-References</span>
+                                    <Badge variant="secondary" className="text-[10px] ml-auto">
+                                      {verseCrossRefs.length}
+                                    </Badge>
+                                  </div>
+                                  {verseCrossRefs.length === 0 ? (
+                                    <p className="text-xs text-muted-foreground">No cross-references found.</p>
+                                  ) : (
+                                    <div className="space-y-1.5">
+                                      {verseCrossRefs.map((cr, idx) => {
+                                        const linkedVerse = cr.from_verse === verseRef ? cr.to_verse : cr.from_verse;
+                                        return (
+                                          <button
+                                            key={idx}
+                                            onClick={() => {
+                                              const parsed = parseReference(linkedVerse);
+                                              if (parsed) {
+                                                setSelectedBook(parsed.book);
+                                                setSelectedChapter(parsed.chapter);
+                                                setPendingVerse(parsed.verse ?? null);
+                                              }
+                                            }}
+                                            className="flex items-center gap-2 rounded-lg bg-secondary/50 px-3 py-2 w-full text-left hover:bg-secondary/80 transition-colors"
+                                          >
+                                            <Book className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                                            <span className="text-xs text-foreground font-medium underline decoration-primary/30">{linkedVerse}</span>
+                                            {cr.weight && cr.weight >= 2 && (
+                                              <Badge variant="outline" className="text-[9px] ml-auto px-1.5 py-0">
+                                                {cr.weight === 3 ? "Strong" : "Medium"}
+                                              </Badge>
+                                            )}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          </button>
+                            )}
+                          </div>
                         );
                       })}
                     </div>
@@ -468,8 +563,8 @@ const ExplorePage = () => {
                 )}
               </div>
 
-              {/* Side panel: study notes + cross-references */}
-              <div className="md:col-span-2">
+              {/* Side panel: study notes + cross-references (desktop only) */}
+              <div className="hidden md:block md:col-span-2">
                 <div className="sticky top-24 space-y-4">
                   {selectedVerse ? (
                     <>
@@ -528,18 +623,26 @@ const ExplorePage = () => {
                               const ref = `${selectedVerse.book} ${selectedVerse.chapter}:${selectedVerse.verse_number}`;
                               const linkedVerse = cr.from_verse === ref ? cr.to_verse : cr.from_verse;
                               return (
-                                <div
+                                <button
                                   key={idx}
-                                  className="flex items-center gap-2 rounded-lg bg-secondary/50 px-3 py-2"
+                                  onClick={() => {
+                                    const parsed = parseReference(linkedVerse);
+                                    if (parsed) {
+                                      setSelectedBook(parsed.book);
+                                      setSelectedChapter(parsed.chapter);
+                                      setPendingVerse(parsed.verse ?? null);
+                                    }
+                                  }}
+                                  className="flex items-center gap-2 rounded-lg bg-secondary/50 px-3 py-2 w-full text-left hover:bg-secondary/80 transition-colors"
                                 >
                                   <Book className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                                  <span className="text-sm text-foreground font-medium">{linkedVerse}</span>
+                                  <span className="text-sm text-foreground font-medium underline decoration-primary/30">{linkedVerse}</span>
                                   {cr.weight && cr.weight >= 2 && (
                                     <Badge variant="outline" className="text-[9px] ml-auto px-1.5 py-0">
                                       {cr.weight === 3 ? "Strong" : "Medium"}
                                     </Badge>
                                   )}
-                                </div>
+                                </button>
                               );
                             })}
                           </div>
