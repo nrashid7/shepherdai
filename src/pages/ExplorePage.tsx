@@ -211,6 +211,35 @@ const ExplorePage = () => {
     }
   };
 
+  const parseReference = (input: string): { book: string; chapter: number; verse?: number } | null => {
+    const trimmed = input.trim();
+    // Match patterns like "John 3:16", "1 Corinthians 13", "Genesis 1:1"
+    const match = trimmed.match(/^(\d?\s?[A-Za-z\s]+?)\s+(\d+)(?::(\d+))?$/);
+    if (!match) return null;
+    const rawBook = match[1].trim();
+    const chapter = parseInt(match[2], 10);
+    const verse = match[3] ? parseInt(match[3], 10) : undefined;
+    // Find matching book (case-insensitive)
+    const found = BIBLE_BOOKS.find(
+      (b) => b.name.toLowerCase() === rawBook.toLowerCase()
+    );
+    if (!found || chapter < 1 || chapter > found.chapters) return null;
+    return { book: found.name, chapter, verse };
+  };
+
+  const handleQuickJump = (e: React.FormEvent) => {
+    e.preventDefault();
+    const parsed = parseReference(quickJumpQuery);
+    if (!parsed) {
+      toast.error("Invalid reference. Try e.g. \"John 3:16\" or \"Genesis 1\"");
+      return;
+    }
+    setSelectedBook(parsed.book);
+    setSelectedChapter(parsed.chapter);
+    setPendingVerse(parsed.verse ?? null);
+    setQuickJumpQuery("");
+  };
+
   const handleBack = () => {
     if (selectedVerse) {
       setSelectedVerse(null);
