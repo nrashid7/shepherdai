@@ -175,6 +175,42 @@ const ExplorePage = () => {
   const getStudyNoteForVerse = (verseNum: number) =>
     studyNotes.find((n) => n.verse_reference === `${selectedBook} ${selectedChapter}:${verseNum}`);
 
+  const getVerseRef = (verse: Verse) => `${verse.book} ${verse.chapter}:${verse.verse_number}`;
+
+  const isVerseSaved = (verse: Verse) => savedVerseRefs.has(getVerseRef(verse));
+
+  const toggleSaveVerse = async (verse: Verse) => {
+    if (!user) {
+      toast.error("Sign in to save verses");
+      return;
+    }
+    const ref = getVerseRef(verse);
+    setSavingVerse(true);
+    try {
+      if (savedVerseRefs.has(ref)) {
+        await supabase
+          .from("saved_verses")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("verse_reference", ref);
+        setSavedVerseRefs((prev) => { const next = new Set(prev); next.delete(ref); return next; });
+        toast.success("Verse removed from collection");
+      } else {
+        await supabase.from("saved_verses").insert({
+          user_id: user.id,
+          verse_reference: ref,
+          verse_text: verse.text,
+        });
+        setSavedVerseRefs((prev) => new Set(prev).add(ref));
+        toast.success("Verse saved to collection");
+      }
+    } catch {
+      toast.error("Failed to save verse");
+    } finally {
+      setSavingVerse(false);
+    }
+  };
+
   const handleBack = () => {
     if (selectedVerse) {
       setSelectedVerse(null);
