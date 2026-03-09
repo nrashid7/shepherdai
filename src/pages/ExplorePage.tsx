@@ -425,6 +425,19 @@ const ExplorePage = () => {
                         <p className="text-sm text-foreground italic leading-relaxed">
                           "{selectedVerse.text}"
                         </p>
+                        <Button
+                          variant={isVerseSaved(selectedVerse) ? "secondary" : "outline"}
+                          size="sm"
+                          className="w-full mt-3 gap-2"
+                          disabled={savingVerse}
+                          onClick={() => toggleSaveVerse(selectedVerse)}
+                        >
+                          {isVerseSaved(selectedVerse) ? (
+                            <><BookmarkCheck className="h-4 w-4" /> Saved</>
+                          ) : (
+                            <><Bookmark className="h-4 w-4" /> Save Verse</>
+                          )}
+                        </Button>
                       </div>
 
                       {/* Study note */}
