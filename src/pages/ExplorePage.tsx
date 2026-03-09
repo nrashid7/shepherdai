@@ -147,15 +147,7 @@ const ExplorePage = () => {
         .eq("book", selectedBook)
         .eq("chapter", selectedChapter)
         .order("verse_number");
-      const loadedVerses = data || [];
-      setVerses(loadedVerses);
-
-      // Auto-select pending verse from quick-jump
-      if (pendingVerse) {
-        const target = loadedVerses.find((v) => v.verse_number === pendingVerse);
-        if (target) loadCrossRefs(target);
-        setPendingVerse(null);
-      }
+      setVerses(data || []);
 
       // Load study notes for this chapter
       const { data: notes } = await supabase
@@ -167,7 +159,7 @@ const ExplorePage = () => {
       setLoading(false);
     };
     load();
-  }, [selectedBook, selectedChapter, pendingVerse, loadCrossRefs]);
+  }, [selectedBook, selectedChapter]);
 
   // Load cross-references for selected verse
   const loadCrossRefs = useCallback(async (verse: Verse) => {
