@@ -14,3 +14,12 @@ verify_jwt = false
 
 [functions.embed-bible]
 verify_jwt = false
+
+[functions.seed-bible]
+verify_jwt = false
+
+[functions.seed-cross-refs]
+verify_jwt = false
+
+[functions.seed-study-notes]
+verify_jwt = false
