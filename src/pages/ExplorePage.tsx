@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Book, ChevronRight, ArrowLeft, Link2, StickyNote, Search, BookOpen } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Book, ChevronRight, ArrowLeft, Link2, StickyNote, Search, BookOpen, Bookmark, BookmarkCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-
+import { toast } from "sonner";
 const BIBLE_BOOKS = [
   { name: "Genesis", chapters: 50, testament: "OT" },
   { name: "Exodus", chapters: 40, testament: "OT" },
@@ -96,6 +98,7 @@ type StudyNote = {
 };
 
 const ExplorePage = () => {
+  const { user } = useAuth();
   const [selectedBook, setSelectedBook] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [verses, setVerses] = useState<Verse[]>([]);
@@ -104,6 +107,8 @@ const ExplorePage = () => {
   const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [savedVerseRefs, setSavedVerseRefs] = useState<Set<string>>(new Set());
+  const [savingVerse, setSavingVerse] = useState(false);
 
   const bookData = BIBLE_BOOKS.find((b) => b.name === selectedBook);
   const filteredBooks = BIBLE_BOOKS.filter((b) =>
@@ -111,6 +116,19 @@ const ExplorePage = () => {
   );
   const otBooks = filteredBooks.filter((b) => b.testament === "OT");
   const ntBooks = filteredBooks.filter((b) => b.testament === "NT");
+
+  // Load saved verses for current user
+  useEffect(() => {
+    if (!user) return;
+    const loadSaved = async () => {
+      const { data } = await supabase
+        .from("saved_verses")
+        .select("verse_reference")
+        .eq("user_id", user.id);
+      setSavedVerseRefs(new Set((data || []).map((d) => d.verse_reference)));
+    };
+    loadSaved();
+  }, [user]);
 
   // Load chapter verses
   useEffect(() => {
@@ -156,6 +174,42 @@ const ExplorePage = () => {
 
   const getStudyNoteForVerse = (verseNum: number) =>
     studyNotes.find((n) => n.verse_reference === `${selectedBook} ${selectedChapter}:${verseNum}`);
+
+  const getVerseRef = (verse: Verse) => `${verse.book} ${verse.chapter}:${verse.verse_number}`;
+
+  const isVerseSaved = (verse: Verse) => savedVerseRefs.has(getVerseRef(verse));
+
+  const toggleSaveVerse = async (verse: Verse) => {
+    if (!user) {
+      toast.error("Sign in to save verses");
+      return;
+    }
+    const ref = getVerseRef(verse);
+    setSavingVerse(true);
+    try {
+      if (savedVerseRefs.has(ref)) {
+        await supabase
+          .from("saved_verses")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("verse_reference", ref);
+        setSavedVerseRefs((prev) => { const next = new Set(prev); next.delete(ref); return next; });
+        toast.success("Verse removed from collection");
+      } else {
+        await supabase.from("saved_verses").insert({
+          user_id: user.id,
+          verse_reference: ref,
+          verse_text: verse.text,
+        });
+        setSavedVerseRefs((prev) => new Set(prev).add(ref));
+        toast.success("Verse saved to collection");
+      }
+    } catch {
+      toast.error("Failed to save verse");
+    } finally {
+      setSavingVerse(false);
+    }
+  };
 
   const handleBack = () => {
     if (selectedVerse) {
@@ -371,6 +425,19 @@ const ExplorePage = () => {
                         <p className="text-sm text-foreground italic leading-relaxed">
                           "{selectedVerse.text}"
                         </p>
+                        <Button
+                          variant={isVerseSaved(selectedVerse) ? "secondary" : "outline"}
+                          size="sm"
+                          className="w-full mt-3 gap-2"
+                          disabled={savingVerse}
+                          onClick={() => toggleSaveVerse(selectedVerse)}
+                        >
+                          {isVerseSaved(selectedVerse) ? (
+                            <><BookmarkCheck className="h-4 w-4" /> Saved</>
+                          ) : (
+                            <><Bookmark className="h-4 w-4" /> Save Verse</>
+                          )}
+                        </Button>
                       </div>
 
                       {/* Study note */}
