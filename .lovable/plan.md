@@ -1,27 +1,14 @@
 
 
-## Database Export Plan
+## Export Bible Verse Embeddings
 
-Export all 10 tables from the database to individual CSV files, then package them into a single downloadable ZIP.
-
-### Tables to Export
-1. `bible_verses` — Full Bible text (~31,000 rows)
-2. `cross_references` — Verse-to-verse links
-3. `study_notes` — Commentary per verse
-4. `conversations` — User chat history
-5. `saved_verses` — Bookmarked verses
-6. `saved_devotionals` — Saved devotional plans
-7. `prayer_journal` — Prayer entries
-8. `daily_checkins` — Emotion check-ins
-9. `user_memories` — Spiritual theme tracking
-10. `profiles` — User profiles
-
-### Approach
-- Use `psql` with `COPY ... TO STDOUT WITH CSV HEADER` for each table
-- Write individual CSVs to `/mnt/documents/`
-- Create a ZIP archive containing all CSVs
-- Deliver as a single downloadable file
+Export the `embedding` column from `bible_verses` as a CSV file using `psql`. The query will select `id`, `book`, `chapter`, `verse_number`, and `embedding` for all rows where embedding is not null.
 
 ### Output
-`/mnt/documents/shepherd_ai_database_export.zip` containing all 10 CSV files.
+`/mnt/documents/bible_verses_embeddings.csv` — CSV with columns: `id, book, chapter, verse_number, embedding`
+
+### Command
+```bash
+psql -c "COPY (SELECT id, book, chapter, verse_number, embedding::text FROM public.bible_verses WHERE embedding IS NOT NULL) TO STDOUT WITH CSV HEADER" > /mnt/documents/bible_verses_embeddings.csv
+```
 
