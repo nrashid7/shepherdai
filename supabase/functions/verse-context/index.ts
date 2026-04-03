@@ -1,82 +1,120 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { handleCors } from "../_shared/cors.ts";
+import { extractToolArguments, generateJson } from "../_shared/ai.ts";
+import { createServiceRoleClient, getAppEnv } from "../_shared/env.ts";
+import { AppError, jsonResponse, toErrorResponse } from "../_shared/errors.ts";
+import { parseReference, toReference } from "../_shared/reference.ts";
+import { findVerseByReference, getCrossReferences, getStudyNotes, getSurroundingPassage } from "../_shared/retrieval.ts";
+import { parseVerseContextRequest, validateVerseContextAiOutput } from "../_shared/schema.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+type VerseContextResponse = {
+  reference: string;
+  verseText: string;
+  surroundingPassage: Array<{ verse: number; text: string }>;
+  crossReferences: Array<{ reference: string; text: string; reason: string }>;
+  studyNotes: Array<{ source: string; note: string }>;
+  bookContext: string;
+  explanation: string;
+  lifeApplication: string;
+  relatedThemes: string[];
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const corsResp = handleCors(req);
+  if (corsResp) return corsResp;
 
   try {
-    const { reference } = await req.json();
-    if (!reference) throw new Error("Missing verse reference");
+    const env = getAppEnv();
+    const { reference } = parseVerseContextRequest(await req.json());
+    const sb = createServiceRoleClient(env);
+    const parsedRef = parseReference(reference);
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const mainVerse = await findVerseByReference(sb, reference);
+    if (!mainVerse) {
+      throw new AppError(404, "verse_not_found", `Verse unavailable in database: ${reference}`);
+    }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+    const [surroundingPassage, crossRefs, studyNotes] = await Promise.all([
+      getSurroundingPassage(sb, parsedRef.book, parsedRef.chapter, parsedRef.verse, 2),
+      getCrossReferences(sb, toReference(parsedRef.book, parsedRef.chapter, parsedRef.verse)),
+      getStudyNotes(sb, toReference(parsedRef.book, parsedRef.chapter, parsedRef.verse)),
+    ]);
+
+    const crossRefItems = await Promise.all(
+      crossRefs.slice(0, 8).map(async (cr) => {
+        const linkedRef = cr.from_verse === reference ? cr.to_verse : cr.from_verse;
+        const linkedVerse = await findVerseByReference(sb, linkedRef);
+        return {
+          reference: linkedRef,
+          text: linkedVerse?.text || "",
+          reason: cr.weight != null ? `Cross-reference strength: ${cr.weight}` : "Related passage",
+        };
+      }),
+    );
+
+    let ai = { bookContext: "", explanation: "", lifeApplication: "", relatedThemes: [] as string[] };
+    try {
+      const aiRaw = await generateJson<unknown>(env, {
+        model: env.modelPolicy.verseContext,
         messages: [
           {
             role: "system",
-            content: `You are a Bible study assistant. Given a verse reference, provide:
-1. The full text of the verse
-2. The surrounding passage (5 verses before and after for context)
-3. A brief explanation of the passage's meaning and historical context
-4. 3-5 cross-references with brief explanations of how they connect
-5. A study note with practical application
-
-You MUST use real Bible verses only. Never invent verses.
-Respond in valid JSON with this structure:
-{
-  "reference": "the verse reference",
-  "verse_text": "full text of the specific verse",
-  "surrounding_passage": [{"reference": "ref", "text": "verse text"}],
-  "explanation": "explanation text",
-  "cross_references": [{"reference": "ref", "text": "verse text", "connection": "how it connects"}],
-  "study_note": "practical application",
-  "book_context": "brief context about the book this is from"
-}`
+            content:
+              "You are a Bible study assistant. Scripture is already provided from database. " +
+              "Do not generate new verse text or references; only explain context and life application.",
           },
-          { role: "user", content: `Provide full context for: ${reference}` },
+          {
+            role: "user",
+            content:
+              `Reference: ${reference}\n` +
+              `Verse text: "${mainVerse.text}"\n` +
+              `Surrounding passage: ${JSON.stringify(surroundingPassage)}\n` +
+              `Cross references: ${JSON.stringify(crossRefItems.map((x) => ({ reference: x.reference, text: x.text })))}\n` +
+              `Study notes: ${JSON.stringify(studyNotes.map((n) => n.note_text))}\n\n` +
+              "Return JSON {bookContext, explanation, lifeApplication, relatedThemes}.",
+          },
         ],
-      }),
-    });
-
-    if (!response.ok) {
-      const t = await response.text();
-      console.error("AI error:", response.status, t);
-      return new Response(JSON.stringify({ error: "AI service error" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        tools: [{
+          type: "function",
+          function: {
+            name: "explain_verse_context",
+            description: "Explain verse context using provided scripture",
+            parameters: {
+              type: "object",
+              properties: {
+                bookContext: { type: "string" },
+                explanation: { type: "string" },
+                lifeApplication: { type: "string" },
+                relatedThemes: { type: "array", items: { type: "string" } },
+              },
+              required: ["bookContext", "explanation", "lifeApplication", "relatedThemes"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        toolChoice: { type: "function", function: { name: "explain_verse_context" } },
       });
+
+      const aiParsed = extractToolArguments<unknown>(aiRaw);
+      ai = validateVerseContextAiOutput(aiParsed || {});
+    } catch (e) {
+      console.warn("verse-context AI failed; returning DB-authoritative fallback:", e);
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "";
+    const payload: VerseContextResponse = {
+      reference,
+      verseText: mainVerse.text,
+      surroundingPassage,
+      crossReferences: crossRefItems,
+      studyNotes: studyNotes.map((n) => ({ source: "study_notes", note: n.note_text })),
+      bookContext: ai.bookContext,
+      explanation: ai.explanation,
+      lifeApplication: ai.lifeApplication,
+      relatedThemes: ai.relatedThemes,
+    };
 
-    // Parse JSON from response (handle markdown code blocks)
-    let parsed;
-    try {
-      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-      parsed = JSON.parse(jsonMatch ? jsonMatch[1].trim() : content.trim());
-    } catch {
-      parsed = { reference, explanation: content, verse_text: "", surrounding_passage: [], cross_references: [], study_note: "", book_context: "" };
-    }
-
-    return new Response(JSON.stringify(parsed), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse(payload);
   } catch (e) {
-    console.error("verse-context error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return toErrorResponse(e);
   }
 });

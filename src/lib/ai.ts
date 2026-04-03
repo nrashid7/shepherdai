@@ -1,18 +1,39 @@
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+import type { ChatMessageInput, DevotionalResponse, PrayerResponse } from "@/types/ai";
+import type { VerseContextResponse } from "@/types/bible";
+import type { ChatMemoryContext } from "@/types/memory";
+import { toDevotionalResponse, toPrayerResponse, toVerseContextResponse } from "@/lib/ai-guards";
 
-type Msg = { role: "user" | "assistant"; content: string };
-type Memory = { theme: string; verse_reference: string; frequency: number; note?: string | null };
+const FUNCTIONS_BASE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+const CHAT_URL = `${FUNCTIONS_BASE_URL}/chat`;
+
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const resp = await fetch(`${FUNCTIONS_BASE_URL}/${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ error: "Request failed" }));
+    throw new Error(err.error || "Request failed");
+  }
+  return resp.json() as Promise<T>;
+}
 
 export async function streamChat({
   messages,
   user_memories,
   onDelta,
   onDone,
+  signal,
 }: {
-  messages: Msg[];
-  user_memories?: Memory[];
+  messages: ChatMessageInput[];
+  user_memories?: ChatMemoryContext[];
   onDelta: (deltaText: string) => void;
   onDone: () => void;
+  signal?: AbortSignal;
 }) {
   const resp = await fetch(CHAT_URL, {
     method: "POST",
@@ -21,6 +42,7 @@ export async function streamChat({
       Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
     body: JSON.stringify({ messages, user_memories }),
+    signal,
   });
 
   if (!resp.ok || !resp.body) {
@@ -85,34 +107,14 @@ export async function streamChat({
   onDone();
 }
 
-export async function generatePrayer(emotion: string) {
-  const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/prayer`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-    },
-    body: JSON.stringify({ emotion }),
-  });
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({ error: "Prayer generation failed" }));
-    throw new Error(err.error || "Prayer generation failed");
-  }
-  return resp.json();
+export async function generatePrayer(input: { emotion?: string; topic?: string }): Promise<PrayerResponse> {
+  return toPrayerResponse(await postJson<unknown>("prayer", input));
 }
 
-export async function generateDevotional(topic: string, days: number = 5) {
-  const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/devotional`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-    },
-    body: JSON.stringify({ topic, days }),
-  });
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({ error: "Devotional generation failed" }));
-    throw new Error(err.error || "Devotional generation failed");
-  }
-  return resp.json();
+export async function generateDevotional(topic: string, days: number = 5): Promise<DevotionalResponse> {
+  return toDevotionalResponse(await postJson<unknown>("devotional", { topic, days }));
+}
+
+export async function generateVerseContext(reference: string): Promise<VerseContextResponse> {
+  return toVerseContextResponse(await postJson<unknown>("verse-context", { reference }));
 }

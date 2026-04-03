@@ -29,8 +29,9 @@ const AuthPage = () => {
         toast.success("Welcome back!");
         navigate("/chat");
       }
-    } catch (err: any) {
-      toast.error(err.message || "Authentication failed");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Authentication failed";
+      toast.error(message);
     } finally {
       setLoading(false);
     }

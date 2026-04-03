@@ -247,30 +247,48 @@ export type Database = {
       }
       user_memories: {
         Row: {
+          concerns: string[]
+          confidence: number | null
           created_at: string
+          first_seen_at: string
           frequency: number
           id: string
+          last_seen_at: string
           note: string | null
+          source_type: string | null
+          spiritual_goals: string[]
           theme: string
           updated_at: string
           user_id: string
           verse_reference: string
         }
         Insert: {
+          concerns?: string[]
+          confidence?: number | null
           created_at?: string
+          first_seen_at?: string
           frequency?: number
           id?: string
+          last_seen_at?: string
           note?: string | null
+          source_type?: string | null
+          spiritual_goals?: string[]
           theme: string
           updated_at?: string
           user_id: string
           verse_reference: string
         }
         Update: {
+          concerns?: string[]
+          confidence?: number | null
           created_at?: string
+          first_seen_at?: string
           frequency?: number
           id?: string
+          last_seen_at?: string
           note?: string | null
+          source_type?: string | null
+          spiritual_goals?: string[]
           theme?: string
           updated_at?: string
           user_id?: string

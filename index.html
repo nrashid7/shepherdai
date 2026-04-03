@@ -3,26 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
     <title>Shepherd AI — Scripture for Every Season of Life</title>
     <meta name="description" content="AI-powered Bible companion. Share your struggles, receive scripture-grounded guidance, explanations, and personalized prayers.">
     <meta name="author" content="Shepherd AI" />
 
-    
-    
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/75959dba-ffb1-4d4c-a919-4020c33424db/id-preview-2054ae01--689f1d57-250a-4afa-98df-a71abc7c0ffb.lovable.app-1772996952018.png">
+    <meta property="og:title" content="Shepherd AI — Scripture for Every Season of Life">
+    <meta property="og:description" content="AI-powered Bible companion. Share your struggles, receive scripture-grounded guidance, explanations, and personalized prayers.">
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/75959dba-ffb1-4d4c-a919-4020c33424db/id-preview-2054ae01--689f1d57-250a-4afa-98df-a71abc7c0ffb.lovable.app-1772996952018.png">
-    <meta property="og:title" content="Shepherd AI — Scripture for Every Season of Life">
-  <meta name="twitter:title" content="Shepherd AI — Scripture for Every Season of Life">
-  <meta property="og:description" content="AI-powered Bible companion. Share your struggles, receive scripture-grounded guidance, explanations, and personalized prayers.">
-  <meta name="twitter:description" content="AI-powered Bible companion. Share your struggles, receive scripture-grounded guidance, explanations, and personalized prayers.">
+    <meta name="twitter:site" content="@ShepherdAI" />
+    <meta name="twitter:title" content="Shepherd AI — Scripture for Every Season of Life">
+    <meta name="twitter:description" content="AI-powered Bible companion. Share your struggles, receive scripture-grounded guidance, explanations, and personalized prayers.">
 </head>
 
   <body>
+    <script>
+      try {
+        if (localStorage.getItem("theme") === "dark") {
+          document.documentElement.classList.add("dark");
+        }
+      } catch (e) {}
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

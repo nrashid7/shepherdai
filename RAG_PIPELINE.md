@@ -2,7 +2,7 @@
 
 ## Overview
 
-Shepherd AI uses retrieval-augmented generation (RAG) to ground every AI response in actual Bible text. Rather than relying on the language model's training data for theological content, the system retrieves relevant scripture, cross-references, and study notes from the database and injects them into the prompt context. This ensures that AI responses are traceable to specific verses and that no theology is fabricated from model memory.
+Shepherd AI uses retrieval-augmented generation (RAG) and DB-first scripture retrieval to ground core AI responses in actual Bible text. Rather than relying on model training memory for theology, the system retrieves scripture, cross-references, and study notes from the database and injects that context into prompts or payload shaping.
 
 ## Pipeline Steps
 
@@ -69,10 +69,10 @@ If the user is authenticated, their spiritual memories (theme-verse pairs with f
 
 ### Step 8: Generate and Stream Response
 
-The complete prompt (system prompt + RAG context + memory context + conversation history) is sent to `google/gemini-3-flash-preview` via the Lovable AI Gateway. The response is streamed back as server-sent events (SSE). The edge function pipes the raw SSE stream directly to the client. The frontend parses each `data: {...}` line, extracts content tokens from `choices[0].delta.content`, and renders them incrementally.
+The complete prompt (system prompt + RAG context + memory context + conversation history) is sent through OpenRouter using the model in `MODEL_CHAT` (default: `google/gemini-3-flash-preview`). The response is streamed back as server-sent events (SSE). The edge function pipes the raw SSE stream directly to the client. The frontend parses each `data: {...}` line, extracts content tokens from `choices[0].delta.content`, and renders them incrementally.
 
 The AI response typically includes:
-- **Scripture references** — Bold verse citations drawn from the retrieved context
+- **Scripture references** — Verse citations drawn from retrieved context
 - **Explanation** — Contextual interpretation grounded in the retrieved verses and study notes
 - **Reflection** — A thought-provoking question or application point
 - **Prayer** — A short prayer related to the user's situation and the referenced scripture
@@ -81,11 +81,11 @@ The AI response typically includes:
 
 ### Scripture Is the Primary Source
 
-The RAG pipeline ensures that every response is anchored to real Bible text retrieved from the database. The system prompt explicitly instructs the model to reference the provided verses rather than generating theology from memory.
+The RAG pipeline ensures chat responses are anchored to Bible text retrieved from the database. For `verse-context`, `prayer`, and `devotional`, scripture text and references are retrieved from DB first, and AI is used for explanation/application only.
 
 ### Traceability
 
-AI responses should always be traceable to retrieved verses. The model formats verse references in bold (e.g., **John 3:16**), making it clear which scriptures informed the response. The `memories.ts` module on the frontend extracts these references for persistence and future personalization.
+AI responses should always be traceable to retrieved verses. Memory extraction now supports structured and plain-reference parsing and does not rely exclusively on markdown bold formatting.
 
 ### Context Window Management
 

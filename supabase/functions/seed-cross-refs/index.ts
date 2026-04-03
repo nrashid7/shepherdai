@@ -1,10 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders, handleCors } from "../_shared/cors.ts";
+import { requireAdmin } from "../_shared/admin-auth.ts";
 
 // OpenBible cross-references from scrollmapper/bible_databases
 const CROSS_REFS_URL = "https://raw.githubusercontent.com/scrollmapper/bible_databases/master/sources/extras/cross_references.txt";
@@ -58,7 +55,10 @@ function parseOsisSingle(ref: string): string | null {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const corsResp = handleCors(req);
+  if (corsResp) return corsResp;
+  const adminResp = requireAdmin(req);
+  if (adminResp) return adminResp;
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

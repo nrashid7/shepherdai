@@ -1,16 +1,16 @@
-project_id = "ibxclempzcehqgwbjjth"
+project_id = "hqmbvfkhvtjmvozbgezs"
 
 [functions.chat]
-verify_jwt = false
+verify_jwt = true
 
 [functions.prayer]
-verify_jwt = false
+verify_jwt = true
 
 [functions.devotional]
-verify_jwt = false
+verify_jwt = true
 
 [functions.verse-context]
-verify_jwt = false
+verify_jwt = true
 
 [functions.embed-bible]
 verify_jwt = false

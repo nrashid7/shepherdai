@@ -1,21 +1,18 @@
 import { useState, useRef, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { Send, BookOpen, Sparkles, Bookmark, ExternalLink } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { streamChat } from "@/lib/ai";
+import { motion } from "framer-motion";
+import { Sparkles, Bookmark, ExternalLink } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { extractVerseRefs, extractThemes, upsertMemories } from "@/lib/memories";
-import { detectCrisis, CrisisBanner } from "@/components/CrisisBanner";
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-}
+import { CrisisBanner } from "@/components/CrisisBanner";
+import type { ChatMemoryContext } from "@/types/memory";
+import { saveVerseIfNew } from "@/lib/saved-verses";
+import { useChatSession } from "@/hooks/useChatSession";
+import { ChatComposer } from "@/components/chat/ChatComposer";
+import { ChatMessageList } from "@/components/chat/ChatMessageList";
 
 const quickPrompts = [
   "I feel anxious about the future",
@@ -27,17 +24,36 @@ const quickPrompts = [
 ];
 
 const ChatPage = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [showCrisisBanner, setShowCrisisBanner] = useState(false);
   const [memoryHint, setMemoryHint] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialPromptHandled = useRef(false);
+  const [userMemories, setUserMemories] = useState<ChatMemoryContext[]>([]);
 
-  useEffect(() => { document.title = "Chat — Shepherd AI"; }, []);
+  const {
+    messages,
+    input,
+    setInput,
+    isLoading,
+    showCrisisBanner,
+    setShowCrisisBanner,
+    sendMessage,
+    abort,
+  } = useChatSession({
+    userMemories,
+    onConversationComplete: async (userMessage, assistantResponse) => {
+      await saveConversation(userMessage, assistantResponse);
+    },
+    onError: (message) => toast.error(message),
+  });
+
+  useEffect(() => {
+    document.title = "Chat — Shepherd AI";
+    return () => {
+      abort();
+    };
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -50,11 +66,9 @@ const ChatPage = () => {
     if (prompt) {
       initialPromptHandled.current = true;
       setSearchParams({}, { replace: true });
-      handleSend(prompt);
+      sendMessage(prompt);
     }
   }, [searchParams]);
-
-  const [userMemories, setUserMemories] = useState<any[]>([]);
 
   // Load memories for hint + chat context
   useEffect(() => {
@@ -80,14 +94,19 @@ const ChatPage = () => {
     if (!user) return;
     try {
       const themes = extractThemes(userMsg);
-      await supabase.from("conversations").insert({
+      const { error } = await supabase.from("conversations").insert({
         user_id: user.id,
         message: userMsg,
         response,
         themes,
       });
-      // Populate spiritual memories
-      await upsertMemories(user.id, userMsg, response);
+      if (error) {
+        console.error("Failed to save conversation:", error);
+      }
+      await upsertMemories(user.id, userMsg, response, {
+        citedVerses: extractVerseRefs(response),
+        sourceType: "chat_stream",
+      });
     } catch (e) {
       console.error("Failed to save conversation:", e);
     }
@@ -99,79 +118,44 @@ const ChatPage = () => {
       return;
     }
     try {
-      // Check if already saved to avoid duplicates
-      const { data: existing } = await supabase
-        .from("saved_verses")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("verse_reference", reference)
-        .limit(1);
-      if (existing && existing.length > 0) {
-        toast.info(`${reference} is already saved`);
-        return;
+      let verseText = text;
+      if (!verseText) {
+        const refMatch = reference.match(/^([1-3]?\s?[A-Za-z]+(?:\s[A-Za-z]+)*)\s+(\d+):(\d+)/);
+        if (refMatch) {
+          const { data: dbVerse } = await supabase
+            .from("bible_verses")
+            .select("text")
+            .ilike("book", refMatch[1])
+            .eq("chapter", parseInt(refMatch[2], 10))
+            .eq("verse_number", parseInt(refMatch[3], 10))
+            .limit(1)
+            .maybeSingle();
+          if (dbVerse?.text) {
+            verseText = dbVerse.text;
+          }
+        }
+        if (!verseText) {
+          verseText = reference;
+          toast.info("Verse text couldn't be loaded — try adding a note with the text");
+        }
       }
-      await supabase.from("saved_verses").insert({
-        user_id: user.id,
-        verse_reference: reference,
-        verse_text: text,
+
+      const saved = await saveVerseIfNew({
+        userId: user.id,
+        reference,
+        text: verseText,
       });
-      toast.success(`Saved ${reference}`);
+      if (saved === "exists") toast.info(`${reference} is already saved`);
+      else toast.success(`Saved ${reference}`);
     } catch {
       toast.error("Failed to save verse");
-    }
-  };
-
-  const handleSend = async (text?: string) => {
-    const messageText = text || input.trim();
-    if (!messageText || isLoading) return;
-
-    // Crisis detection
-    if (detectCrisis(messageText)) {
-      setShowCrisisBanner(true);
-    }
-
-    const userMsg: Message = { id: Date.now().toString(), role: "user", content: messageText };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    setIsLoading(true);
-
-    let assistantSoFar = "";
-    const chatMessages = [...messages, userMsg].map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    }));
-
-    try {
-      await streamChat({
-        messages: chatMessages,
-        user_memories: userMemories.length > 0 ? userMemories : undefined,
-        onDelta: (chunk) => {
-          assistantSoFar += chunk;
-          setMessages((prev) => {
-            const last = prev[prev.length - 1];
-            if (last?.role === "assistant") {
-              return prev.map((m, i) =>
-                i === prev.length - 1 ? { ...m, content: assistantSoFar } : m
-              );
-            }
-            return [...prev, { id: `ai-${Date.now()}`, role: "assistant", content: assistantSoFar }];
-          });
-        },
-        onDone: () => {
-          setIsLoading(false);
-          saveConversation(messageText, assistantSoFar);
-        },
-      });
-    } catch (e: any) {
-      toast.error(e.message || "Failed to get response");
-      setIsLoading(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      sendMessage();
     }
   };
 
@@ -183,7 +167,7 @@ const ChatPage = () => {
           strong: ({ children }) => {
             const text = String(children);
             // Check if this looks like a Bible reference
-            const verseMatch = text.match(/^([1-3]?\s?[A-Z][a-z]+(?:\s[A-Z][a-z]+)?\s\d+:\d+(?:-\d+)?)$/);
+            const verseMatch = text.match(/^([1-3]?\s?[A-Z][a-z]+(?:\s[a-zA-Z]+)*\s\d+:\d+(?:-\d+)?)$/);
             if (verseMatch) {
               const ref = verseMatch[1];
               return (
@@ -259,7 +243,7 @@ const ChatPage = () => {
                 {quickPrompts.map((prompt) => (
                   <button
                     key={prompt}
-                    onClick={() => handleSend(prompt)}
+                    onClick={() => sendMessage(prompt)}
                     className="rounded-full border border-border bg-card px-4 py-2 font-body text-sm text-foreground shadow-card transition-all hover:border-primary/30 hover:shadow-soft"
                   >
                     {prompt}
@@ -269,84 +253,20 @@ const ChatPage = () => {
             </motion.div>
           </div>
         ) : (
-          <div className="container mx-auto max-w-3xl px-4 py-6">
-            <AnimatePresence>
-              {messages.map((msg) => (
-                <motion.div
-                  key={msg.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`mb-6 ${msg.role === "user" ? "flex justify-end" : ""}`}
-                >
-                  {msg.role === "user" ? (
-                    <div className="max-w-[80%] rounded-2xl rounded-br-md gradient-gold px-5 py-3 text-primary-foreground shadow-soft">
-                      <p className="font-body text-sm">{msg.content}</p>
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
-                      <div className="mb-3 flex items-center gap-2">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg gradient-gold">
-                          <BookOpen className="h-4 w-4 text-primary-foreground" />
-                        </div>
-                        <span className="font-display text-sm font-semibold text-foreground">
-                          Shepherd AI
-                        </span>
-                      </div>
-                      <div className="prose prose-sm max-w-none font-body text-foreground prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-em:text-muted-foreground prose-blockquote:border-l-primary/40 prose-blockquote:text-muted-foreground">
-                        {renderAssistantContent(msg.content)}
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-
-            {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex items-center gap-2 text-muted-foreground"
-              >
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg gradient-gold">
-                  <BookOpen className="h-4 w-4 text-primary-foreground" />
-                </div>
-                <div className="flex gap-1">
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-primary/40" style={{ animationDelay: "0ms" }} />
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-primary/40" style={{ animationDelay: "150ms" }} />
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-primary/40" style={{ animationDelay: "300ms" }} />
-                </div>
-              </motion.div>
-            )}
+          <>
+            <ChatMessageList messages={messages} isLoading={isLoading} renderAssistantContent={renderAssistantContent} />
             <div ref={messagesEndRef} />
-          </div>
+          </>
         )}
       </div>
 
-      <div className="border-t border-border bg-background/80 backdrop-blur-md">
-        <div className="container mx-auto max-w-3xl px-4 py-4">
-          <div className="flex items-end gap-3 rounded-xl border border-border bg-card p-2 shadow-card">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Share what's on your heart..."
-              rows={1}
-              className="flex-1 resize-none bg-transparent px-3 py-2 font-body text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-            />
-            <Button
-              onClick={() => handleSend()}
-              disabled={!input.trim() || isLoading}
-              size="sm"
-              className="gradient-gold border-0 text-primary-foreground shadow-soft hover:opacity-90"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-          <p className="mt-2 text-center font-body text-xs text-muted-foreground">
-            Shepherd AI provides scripture-based guidance. Always verify references with your Bible.
-          </p>
-        </div>
-      </div>
+      <ChatComposer
+        input={input}
+        isLoading={isLoading}
+        onInputChange={setInput}
+        onSend={() => sendMessage()}
+        onKeyDown={handleKeyDown}
+      />
     </div>
   );
 };

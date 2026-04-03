@@ -1,29 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, BookOpen, Clock, Loader2, Image } from "lucide-react";
-import { generatePrayer } from "@/lib/ai";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { format } from "date-fns";
 import { PrayerCardModal } from "@/components/PrayerCard";
-
-interface PrayerEntry {
-  id: string;
-  emotion: string;
-  verse_reference: string;
-  prayer_text: string;
-  reflection: string | null;
-  created_at: string;
-}
-
-interface PrayerResponse {
-  verse_reference: string;
-  verse_text: string;
-  prayer: string;
-  reflection: string;
-  cross_reference?: string;
-}
+import { usePrayerGenerator } from "@/hooks/usePrayerGenerator";
 
 const emotions = [
   { label: "Anxious", emoji: "😟" },
@@ -35,60 +15,11 @@ const emotions = [
 ];
 
 const PrayerPage = () => {
-  const [selectedEmotion, setSelectedEmotion] = useState<string | null>(null);
-  const [prayer, setPrayer] = useState<PrayerResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [journal, setJournal] = useState<PrayerEntry[]>([]);
   const [showJournal, setShowJournal] = useState(false);
   const [cardData, setCardData] = useState<{ verse_reference: string; verse_text: string; prayer?: string; reflection?: string } | null>(null);
-  const { user } = useAuth();
+  const { selectedEmotion, prayer, loading, journal, handleSelectEmotion } = usePrayerGenerator();
 
   useEffect(() => { document.title = "Prayer — Shepherd AI"; }, []);
-
-  useEffect(() => {
-    if (user) loadJournal();
-  }, [user]);
-
-  const loadJournal = async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from("prayer_journal")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(20);
-    if (data) setJournal(data as PrayerEntry[]);
-  };
-
-  const handleSelectEmotion = async (emotion: string) => {
-    setSelectedEmotion(emotion);
-    setPrayer(null);
-    setLoading(true);
-    try {
-      const result = await generatePrayer(emotion);
-      setPrayer(result);
-      if (user) {
-        // Save to prayer journal
-        await supabase.from("prayer_journal").insert({
-          user_id: user.id,
-          emotion,
-          verse_reference: result.verse_reference,
-          prayer_text: result.prayer,
-          reflection: result.reflection,
-        });
-        // Also record daily check-in
-        await supabase.from("daily_checkins" as any).insert({
-          user_id: user.id,
-          emotion,
-        } as any);
-        loadJournal();
-      }
-    } catch (e: any) {
-      toast.error(e.message || "Failed to generate prayer");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen pb-20 pt-16 md:pb-0">
@@ -101,7 +32,7 @@ const PrayerPage = () => {
           <p className="font-body text-muted-foreground">Select what resonates with your heart right now.</p>
         </motion.div>
 
-        {user && journal.length > 0 && (
+        {journal.length > 0 && (
           <div className="mb-6 text-center">
             <button onClick={() => setShowJournal(!showJournal)} className="inline-flex items-center gap-2 font-body text-sm font-medium text-primary hover:underline">
               <Clock className="h-4 w-4" />
@@ -170,25 +101,28 @@ const PrayerPage = () => {
                 <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <BookOpen className="h-4 w-4 text-primary" />
-                    <span className="font-display text-sm font-semibold text-primary">{prayer.verse_reference}</span>
+                    <span className="font-display text-sm font-semibold text-primary">{prayer.supportingScriptures[0]?.reference || "Supporting scripture"}</span>
                   </div>
                   <button
-                    onClick={() => setCardData({ verse_reference: prayer.verse_reference, verse_text: prayer.verse_text, prayer: prayer.prayer, reflection: prayer.reflection })}
+                    onClick={() => setCardData({
+                      verse_reference: prayer.supportingScriptures[0]?.reference || "N/A",
+                      verse_text: prayer.supportingScriptures[0]?.text || "",
+                      prayer: prayer.prayer,
+                      reflection: prayer.encouragement,
+                    })}
                     className="inline-flex items-center gap-1 rounded-md px-2 py-1 font-body text-xs font-medium text-primary hover:bg-primary/10"
                   >
                     <Image className="h-3.5 w-3.5" /> Share Card
                   </button>
                 </div>
-                <p className="font-display text-lg italic leading-relaxed text-foreground">"{prayer.verse_text}"</p>
-              </div>
-
-              {prayer.cross_reference && (
-                <div className="rounded-lg border border-border bg-secondary/50 p-4">
-                  <p className="font-body text-sm text-muted-foreground">
-                    <span className="font-medium text-primary">Cross-reference:</span> {prayer.cross_reference}
-                  </p>
+                <div className="space-y-3">
+                  {prayer.supportingScriptures.map((scripture) => (
+                    <p key={scripture.reference} className="font-body text-sm leading-relaxed text-foreground">
+                      <span className="font-semibold text-primary">{scripture.reference}</span> — "{scripture.text}"
+                    </p>
+                  ))}
                 </div>
-              )}
+              </div>
 
               <div className="rounded-xl border border-border bg-card p-6 shadow-card">
                 <h3 className="mb-3 font-display text-lg font-semibold text-foreground">Your Prayer</h3>
@@ -196,8 +130,8 @@ const PrayerPage = () => {
               </div>
 
               <div className="rounded-xl border border-border bg-secondary/50 p-6">
-                <h3 className="mb-2 font-display text-base font-semibold text-foreground">Reflection</h3>
-                <p className="font-body text-sm text-muted-foreground">{prayer.reflection}</p>
+                <h3 className="mb-2 font-display text-base font-semibold text-foreground">Encouragement</h3>
+                <p className="font-body text-sm text-muted-foreground">{prayer.encouragement}</p>
               </div>
             </motion.div>
           )}

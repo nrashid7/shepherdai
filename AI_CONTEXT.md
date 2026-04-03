@@ -10,7 +10,7 @@ An AI-powered Bible companion that helps users apply scripture to real-life situ
 
 ## Core Philosophy
 
-**Scripture-first AI.** The system retrieves scripture and supporting knowledge (cross-references, study notes) rather than generating theology from model memory. Every AI response is grounded in retrieved Bible text, ensuring traceability and theological accuracy.
+**Scripture-first AI.** Core flows retrieve scripture and supporting knowledge (cross-references, study notes) from DB and treat that data as authoritative. AI is used for explanation/application and should not invent scripture text.
 
 ## Key Capabilities
 
@@ -55,24 +55,26 @@ An AI-powered Bible companion that helps users apply scripture to real-life situ
 
 | Technology | Purpose |
 |---|---|
-| Lovable AI Gateway | Proxy to LLM providers (`https://ai.gateway.lovable.dev/v1/chat/completions`) |
-| google/gemini-3-flash-preview | Primary model for chat, prayer, and devotional generation |
-| google/gemini-2.5-flash | Model for verse-context deep-dive (structured JSON output) |
+| OpenRouter | Proxy to LLM providers (`https://openrouter.ai/api/v1/chat/completions`) |
+| `MODEL_CHAT` (`google/gemini-3-flash-preview`) | Chat streaming model |
+| `MODEL_PRAYER` (`anthropic/claude-haiku-4.5`) | Prayer structured-output model |
+| `MODEL_DEVOTIONAL` (`anthropic/claude-haiku-4.5`) | Devotional structured-output model |
+| `MODEL_VERSE_CONTEXT` (`google/gemini-3-flash-preview`) | Verse-context structured-output model |
 
 ### Hosting
 
 | Technology | Purpose |
 |---|---|
-| Lovable Cloud | Application hosting and deployment |
-| Published URL | `https://shepherdai.lovable.app` |
+| Supabase | Backend hosting (database, auth, edge functions) |
+| Vercel / Static Host | Frontend hosting and deployment |
 
 ## Development Workflow
 
 ```
-Cursor (IDE) → GitHub (source control) → Lovable Cloud (deployment)
+Cursor (IDE) → GitHub (source control) → Deployment (Vercel / Supabase)
 ```
 
-Development happens in **Cursor**. Code is pushed to **GitHub**, which triggers deployment on **Lovable Cloud**. Lovable manages runtime infrastructure including the Supabase project, edge function deployment, and the AI gateway. Developers do not manage servers, containers, or CI/CD pipelines directly.
+Development happens in **Cursor**. Code is pushed to **GitHub**, which triggers deployment. Supabase manages the database, authentication, and edge functions. OpenRouter provides the AI gateway for LLM access. The frontend is deployed as a static site.
 
 ## Key Files for AI Assistants
 

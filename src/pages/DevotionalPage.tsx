@@ -3,97 +3,35 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BookOpen, Loader2, ChevronDown, ChevronUp, Save, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { generateDevotional } from "@/lib/ai";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { format } from "date-fns";
-
-interface DevotionalDay {
-  day: number;
-  title: string;
-  verse_reference: string;
-  verse_text: string;
-  explanation: string;
-  reflection: string;
-  prayer: string;
-}
-
-interface SavedDevotional {
-  id: string;
-  topic: string;
-  days_count: number;
-  devotional_json: DevotionalDay[];
-  created_at: string;
-}
+import { useDevotionalGenerator } from "@/hooks/useDevotionalGenerator";
 
 const suggestedTopics = ["Anxiety", "Hope", "Forgiveness", "Patience", "Love", "Faith", "Courage", "Gratitude"];
 
 const DevotionalPage = () => {
-  const [topic, setTopic] = useState("");
-  const [days, setDays] = useState(5);
-  const [devotional, setDevotional] = useState<DevotionalDay[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [expandedDay, setExpandedDay] = useState<number | null>(null);
-  const [savedDevotionals, setSavedDevotionals] = useState<SavedDevotional[]>([]);
   const [showSaved, setShowSaved] = useState(false);
   const { user } = useAuth();
+  const {
+    topic,
+    setTopic,
+    days,
+    setDays,
+    devotional,
+    loading,
+    expandedDay,
+    setExpandedDay,
+    savedDevotionals,
+    handleGenerate,
+    handleSave,
+    loadDevotional,
+  } = useDevotionalGenerator();
 
   useEffect(() => {
     document.title = "Devotional Generator — Shepherd AI";
-    if (user) loadSaved();
   }, [user]);
-
-  const loadSaved = async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from("saved_devotionals")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(10);
-    if (data) setSavedDevotionals(data as unknown as SavedDevotional[]);
-  };
-
-  const handleGenerate = async (customTopic?: string) => {
-    const t = customTopic || topic.trim();
-    if (!t) return;
-    setLoading(true);
-    setDevotional([]);
-    try {
-      const result = await generateDevotional(t, days);
-      setDevotional(result.devotional || []);
-      setExpandedDay(1);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to generate devotional");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!user) {
-      toast.error("Sign in to save devotionals");
-      return;
-    }
-    const { error } = await supabase.from("saved_devotionals").insert({
-      user_id: user.id,
-      topic: topic || "Untitled",
-      days_count: devotional.length,
-      devotional_json: devotional as any,
-    });
-    if (error) {
-      toast.error("Failed to save devotional");
-    } else {
-      toast.success("Devotional saved!");
-      loadSaved();
-    }
-  };
-
-  const loadDevotional = (saved: SavedDevotional) => {
-    setDevotional(saved.devotional_json);
-    setTopic(saved.topic);
-    setExpandedDay(1);
+  const handleLoadDevotional = (saved: (typeof savedDevotionals)[number]) => {
+    loadDevotional(saved);
     setShowSaved(false);
   };
 
@@ -123,7 +61,7 @@ const DevotionalPage = () => {
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-8 overflow-hidden">
               <div className="space-y-2 rounded-xl border border-border bg-card p-5 shadow-card">
                 {savedDevotionals.map((s) => (
-                  <button key={s.id} onClick={() => loadDevotional(s)} className="flex w-full items-center justify-between rounded-lg border border-border bg-secondary/30 p-3 text-left transition-all hover:border-primary/30">
+                  <button key={s.id} onClick={() => handleLoadDevotional(s)} className="flex w-full items-center justify-between rounded-lg border border-border bg-secondary/30 p-3 text-left transition-all hover:border-primary/30">
                     <div>
                       <p className="font-display text-sm font-semibold text-foreground">{s.topic}</p>
                       <p className="font-body text-xs text-muted-foreground">{s.days_count} days · {format(new Date(s.created_at), "MMM d, yyyy")}</p>
@@ -202,7 +140,7 @@ const DevotionalPage = () => {
                       <div>
                         <span className="font-body text-xs font-medium uppercase tracking-wider text-primary">Day {day.day}</span>
                         <h3 className="mt-1 font-display text-lg font-semibold text-foreground">{day.title}</h3>
-                        <p className="font-body text-xs text-muted-foreground">{day.verse_reference}</p>
+                        <p className="font-body text-xs text-muted-foreground">{day.primaryVerse.reference}</p>
                       </div>
                       {isExpanded ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
                     </button>
@@ -211,16 +149,28 @@ const DevotionalPage = () => {
                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                           <div className="space-y-4 border-t border-border px-5 pb-5 pt-4">
                             <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                              <p className="mb-1 font-display text-sm font-semibold text-primary">{day.verse_reference}</p>
-                              <p className="font-display italic text-foreground">"{day.verse_text}"</p>
+                              <p className="mb-1 font-display text-sm font-semibold text-primary">{day.primaryVerse.reference}</p>
+                              <p className="font-display italic text-foreground">"{day.primaryVerse.text}"</p>
                             </div>
+                            {day.supportingVerses.length > 0 && (
+                              <div>
+                                <h4 className="mb-2 font-display text-sm font-semibold text-foreground">Supporting Verses</h4>
+                                <div className="space-y-1">
+                                  {day.supportingVerses.map((s) => (
+                                    <p key={s.reference} className="font-body text-sm text-muted-foreground">
+                                      <span className="font-medium text-primary">{s.reference}</span> — "{s.text}"
+                                    </p>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                             <div>
-                              <h4 className="mb-2 font-display text-sm font-semibold text-foreground">Explanation</h4>
-                              <p className="font-body text-sm leading-relaxed text-muted-foreground">{day.explanation}</p>
+                              <h4 className="mb-2 font-display text-sm font-semibold text-foreground">Reflection</h4>
+                              <p className="font-body text-sm leading-relaxed text-muted-foreground">{day.reflection}</p>
                             </div>
                             <div className="rounded-lg bg-secondary/50 p-4">
-                              <h4 className="mb-1 font-display text-sm font-semibold text-foreground">Reflection</h4>
-                              <p className="font-body text-sm text-muted-foreground">{day.reflection}</p>
+                              <h4 className="mb-1 font-display text-sm font-semibold text-foreground">Action Step</h4>
+                              <p className="font-body text-sm text-muted-foreground">{day.actionStep}</p>
                             </div>
                             <div>
                               <h4 className="mb-2 font-display text-sm font-semibold text-foreground">Prayer</h4>

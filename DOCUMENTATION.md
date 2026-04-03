@@ -1,8 +1,7 @@
 # Shepherd AI — Complete Project Documentation
 
 > **Last updated:** March 2026  
-> **Published URL:** https://shepherdai.lovable.app  
-> **Built on:** Lovable (React + Vite + Supabase via Lovable Cloud)
+> **Stack:** React + Vite + Supabase Edge Functions + OpenRouter
 
 ---
 
@@ -57,8 +56,8 @@ The app detects crisis signals (e.g., self-harm keywords) and displays helpline 
 | **Animation** | framer-motion | 12.35.x |
 | **Markdown Rendering** | react-markdown | 10.1.x |
 | **Image Export** | html-to-image | 1.11.x |
-| **Backend** | Supabase (via Lovable Cloud) | — |
-| **AI Gateway** | Lovable AI Gateway | — |
+| **Backend** | Supabase (Edge Functions + PostgreSQL) | — |
+| **AI Gateway** | OpenRouter | — |
 | **Fonts** | Playfair Display (display), Inter (body) | Google Fonts |
 | **Testing** | Vitest + jsdom | 3.2.x |
 | **Date Formatting** | date-fns | 3.6.x |
@@ -328,7 +327,7 @@ All user-scoped tables have RLS enabled. Here's the policy summary:
 
 ## 7. Edge Functions
 
-All edge functions are deployed to Supabase and run as Deno serverless functions. **All have `verify_jwt = false`** in `supabase/config.toml`.
+All user-facing edge functions are deployed to Supabase and run as Deno serverless functions with JWT verification enabled (`verify_jwt = true` for chat/prayer/devotional/verse-context in `supabase/config.toml`).
 
 ### `chat` (Main AI Chat)
 
@@ -336,7 +335,7 @@ All edge functions are deployed to Supabase and run as Deno serverless functions
 **Method:** POST  
 **Input:** `{ messages: {role, content}[], user_memories?: Memory[] }`  
 **Output:** SSE stream (Server-Sent Events)  
-**Model:** `google/gemini-3-flash-preview`
+**Model:** `MODEL_CHAT` (default `google/gemini-3-flash-preview`)
 
 **Architecture (RAG Pipeline):**
 1. Extracts the last user message
@@ -357,28 +356,29 @@ All edge functions are deployed to Supabase and run as Deno serverless functions
 **File:** `supabase/functions/prayer/index.ts`  
 **Method:** POST  
 **Input:** `{ emotion: string }`  
-**Output:** JSON `{ verse_reference, verse_text, prayer, reflection, cross_reference? }`  
-**Model:** `google/gemini-3-flash-preview`  
-**Technique:** Function/tool calling (`generate_prayer` tool) for structured output
+**Output:** JSON `{ topic, emotion, supportingScriptures[], prayer, encouragement }`  
+**Model:** `MODEL_PRAYER` (default `anthropic/claude-haiku-4.5`)  
+**Technique:** Structured output where scripture content is DB-retrieved and AI writes prayer/encouragement
 
 ### `devotional` (Devotional Generation)
 
 **File:** `supabase/functions/devotional/index.ts`  
 **Method:** POST  
 **Input:** `{ topic: string, days?: number }`  
-**Output:** JSON `{ devotional: DevotionalDay[] }`  
-**Model:** `google/gemini-3-flash-preview`  
-**Technique:** Function/tool calling (`create_devotional` tool) for structured output
+**Output:** JSON `{ topic, days: DevotionalDay[] }`  
+**Model:** `MODEL_DEVOTIONAL` (default `anthropic/claude-haiku-4.5`)  
+**Technique:** Structured output where verse text is selected from DB retrieval and AI writes reflection/action/prayer
 
 Each `DevotionalDay`:
 ```typescript
 {
   day: number;
   title: string;
-  verse_reference: string;
-  verse_text: string;
-  explanation: string;
+  theme: string;
+  primaryVerse: { reference: string; text: string };
+  supportingVerses: { reference: string; text: string }[];
   reflection: string;
+  actionStep: string;
   prayer: string;
 }
 ```
@@ -388,9 +388,9 @@ Each `DevotionalDay`:
 **File:** `supabase/functions/verse-context/index.ts`  
 **Method:** POST  
 **Input:** `{ reference: string }`  
-**Output:** JSON `{ reference, verse_text, surrounding_passage[], explanation, cross_references[], study_note, book_context }`  
-**Model:** `google/gemini-2.5-flash`  
-**Technique:** Direct JSON response (with markdown code block extraction fallback)
+**Output:** JSON `{ reference, verseText, surroundingPassage[], crossReferences[], studyNotes[], bookContext, explanation, lifeApplication, relatedThemes[] }`  
+**Model:** `MODEL_VERSE_CONTEXT` (default `google/gemini-3-flash-preview`)  
+**Technique:** DB-authoritative scripture retrieval + structured AI explanation fields
 
 ### Seeder Functions (One-Time Use)
 
@@ -410,16 +410,18 @@ These are utility functions that should only need to be run once (or to update d
 
 ### Gateway
 
-All AI calls go through the **Lovable AI Gateway** at `https://ai.gateway.lovable.dev/v1/chat/completions`. This is an OpenAI-compatible API that proxies to supported models.
+All AI calls go through **OpenRouter** at `https://openrouter.ai/api/v1/chat/completions`. This is an OpenAI-compatible API that proxies to supported models.
 
-**Authentication:** `LOVABLE_API_KEY` secret set on edge functions.
+**Authentication:** `OPENROUTER_API_KEY` secret set on edge functions.
 
 ### Models Used
 
 | Model | Used By | Why |
 |-------|---------|-----|
-| `google/gemini-3-flash-preview` | chat, prayer, devotional | Fast, good reasoning, supports streaming and tool calling |
-| `google/gemini-2.5-flash` | verse-context | Balanced cost/quality for structured JSON generation |
+| `MODEL_CHAT` (`google/gemini-3-flash-preview`) | chat | Streaming model for conversational guidance |
+| `MODEL_PRAYER` (`anthropic/claude-haiku-4.5`) | prayer | Structured-output model for prayer payloads |
+| `MODEL_DEVOTIONAL` (`anthropic/claude-haiku-4.5`) | devotional | Structured-output model for devotional payloads |
+| `MODEL_VERSE_CONTEXT` (`google/gemini-3-flash-preview`) | verse-context | Structured-output model for context explanations |
 
 ### Client-Side AI Module (`src/lib/ai.ts`)
 
@@ -604,7 +606,7 @@ Provides:
 
 | Secret | Purpose | Used By |
 |--------|---------|---------|
-| `LOVABLE_API_KEY` | Lovable AI Gateway authentication | chat, prayer, devotional, verse-context, seed-study-notes-ai |
+| `OPENROUTER_API_KEY` | OpenRouter API authentication | chat, prayer, devotional, verse-context, seed-study-notes-ai |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-side DB access (bypasses RLS) | chat (for RAG queries) |
 | `SUPABASE_URL` | Supabase URL (auto-available in edge functions) | chat |
 
@@ -779,7 +781,7 @@ Authentication:
 
 ### ⚠️ Partially Working
 
-- **Verse text when saving from chat:** `handleSaveVerse` in ChatPage passes empty string `""` for `verse_text` — the verse is saved but without the actual text
+- **Verse save reliability improved:** Chat/Verse/Explore now share a save helper and use authoritative text lookup when needed.
 - **Study notes coverage:** Generated for books 0-24 (Genesis through Lamentations); books 25-65 may have incomplete coverage
 - **Cross-reference scroll-to:** Clicking a cross-ref in Explore navigates to the correct chapter but doesn't scroll to the specific verse
 
@@ -789,7 +791,7 @@ Authentication:
 
 ### Security
 
-1. **JWT verification disabled on all edge functions** — `verify_jwt = false` in `config.toml`. Anyone with the anon key can call all edge functions. For a production app, sensitive functions should verify JWT.
+1. **JWT verification split by function type** — User-facing functions verify JWT, while admin/seed functions use admin-secret flows. Keep seed endpoints private and operationally restricted.
 2. **No rate limiting on client** — Chat, prayer, and devotional requests have no client-side throttling. Server-side 429 errors are handled but there's no proactive rate limiting.
 
 ### Authentication
@@ -812,7 +814,7 @@ Authentication:
 
 ### Testing
 
-12. **No real tests** — Only a placeholder test (`example.test.ts` with `expect(true).toBe(true)`)
+12. **Limited test coverage** — Core utility tests now exist for reference parsing and memory extraction, but end-to-end and edge-function tests still need expansion
 13. **No integration tests** — No tests for API calls, database operations, or user flows
 14. **No component tests** — No tests for React components
 
@@ -868,18 +870,16 @@ npm run test:watch  # Watch mode
 ## 17. Deployment
 
 ### Frontend
-- Deployed via Lovable's publish flow
-- Accessible at `https://shepherdai.lovable.app`
-- Frontend changes require clicking "Update" in the publish dialog
+- Built with Vite and deployed as a static site
+- Frontend changes are deployed via standard CI/CD pipeline
 
 ### Backend (Edge Functions)
-- Deploy automatically when code is pushed
-- No manual deployment needed
+- Deployed to Supabase Edge Functions
 - All 8 functions are currently deployed
 
 ### Database
-- Managed via Lovable Cloud (Supabase)
-- Migrations are in `supabase/migrations/` (auto-managed, DO NOT EDIT)
+- Managed via Supabase
+- Migrations are in `supabase/migrations/`
 
 ---
 
@@ -917,7 +917,7 @@ npm run dev
 
 ### Environment Variables
 
-The `.env` file is auto-managed by Lovable Cloud. For local development, you'll need:
+For local development, you'll need the following in your `.env` file:
 ```
 VITE_SUPABASE_URL=<your-supabase-url>
 VITE_SUPABASE_PUBLISHABLE_KEY=<your-anon-key>

@@ -1,104 +1,94 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
-const SYSTEM_PROMPT = `You are a prayer companion powered by scripture. Given a user's emotional state, you must:
-
-1. Select 1-2 highly relevant Bible verses for their emotion
-2. Write a heartfelt, personalized prayer grounded in those verses
-3. Provide a reflection question
-
-Format your response as valid JSON with this exact structure:
-{
-  "verse_reference": "Book Chapter:Verse",
-  "verse_text": "The full verse text",
-  "prayer": "A personalized prayer...",
-  "reflection": "A thoughtful reflection question...",
-  "cross_reference": "Another Book Chapter:Verse - brief text"
-}
-
-Never invent Bible verses. Use real, accurate scripture.`;
+import { handleCors } from "../_shared/cors.ts";
+import { extractToolArguments, generateJson } from "../_shared/ai.ts";
+import { createServiceRoleClient, getAppEnv } from "../_shared/env.ts";
+import { AppError, jsonResponse, toErrorResponse } from "../_shared/errors.ts";
+import { getRelevantVersesForTheme } from "../_shared/retrieval.ts";
+import { parsePrayerRequest, validatePrayerAiOutput } from "../_shared/schema.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const corsResp = handleCors(req);
+  if (corsResp) return corsResp;
 
   try {
-    const { emotion } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const env = getAppEnv();
+    const { emotion, topic } = parsePrayerRequest(await req.json());
+    const seed = emotion || topic || "general";
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: `I am feeling ${emotion}. Please provide scripture-based guidance and a prayer.` },
-        ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "generate_prayer",
-            description: "Generate a scripture-based prayer response",
-            parameters: {
-              type: "object",
-              properties: {
-                verse_reference: { type: "string" },
-                verse_text: { type: "string" },
-                prayer: { type: "string" },
-                reflection: { type: "string" },
-                cross_reference: { type: "string" },
-              },
-              required: ["verse_reference", "verse_text", "prayer", "reflection"],
-              additionalProperties: false,
+    const sb = createServiceRoleClient(env);
+    const supportingScriptures = await getRelevantVersesForTheme(sb, seed, { limit: 7 });
+    if (supportingScriptures.length === 0) {
+      throw new AppError(404, "scripture_not_found", "No supporting scripture found for this request");
+    }
+
+    const scriptureBlock = supportingScriptures
+      .slice(0, 7)
+      .map((s) => `- ${s.reference}: "${s.text}"`)
+      .join("\n");
+
+    const aiPayload = await generateJson<unknown>(env, {
+      model: env.modelPolicy.prayer,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You write pastoral prayers grounded in the provided scripture list. Use only provided verses as sources and do not invent scripture.",
+        },
+        {
+          role: "user",
+          content:
+            `Topic: ${topic || "not provided"}\nEmotion: ${emotion || "not provided"}\n` +
+            `Supporting scripture from database:\n${scriptureBlock}\n\n` +
+            "Return JSON with {topic, emotion, prayer, encouragement}.",
+        },
+      ],
+      tools: [{
+        type: "function",
+        function: {
+          name: "generate_prayer_payload",
+          description: "Return prayer response fields only",
+          parameters: {
+            type: "object",
+            properties: {
+              topic: { type: "string" },
+              emotion: { type: "string" },
+              prayer: { type: "string" },
+              encouragement: { type: "string" },
             },
+            required: ["prayer", "encouragement"],
+            additionalProperties: false,
           },
-        }],
-        tool_choice: { type: "function", function: { name: "generate_prayer" } },
-      }),
+        },
+      }],
+      toolChoice: { type: "function", function: { name: "generate_prayer_payload" } },
     });
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Usage limit reached." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await response.text();
-      console.error("Prayer AI error:", response.status, t);
-      throw new Error("AI service error");
+    let aiResult: { topic?: string; emotion?: string; prayer: string; encouragement: string } | null = null;
+    try {
+      const raw = extractToolArguments<unknown>(aiPayload);
+      aiResult = validatePrayerAiOutput(raw || {});
+    } catch (e) {
+      console.warn("prayer AI failed; returning DB-authoritative fallback:", e);
     }
 
-    const data = await response.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    let result;
-    if (toolCall) {
-      result = JSON.parse(toolCall.function.arguments);
-    } else {
-      // Fallback: try to parse content as JSON
-      const content = data.choices?.[0]?.message?.content || "";
-      result = JSON.parse(content);
-    }
+    const leadVerse = supportingScriptures[0];
+    const fallbackPrayer =
+      `God, You see my heart today.\n\n` +
+      `As I reflect on ${leadVerse?.reference || "Your Word"}, help me lean on Your presence and promises. ` +
+      `Give me peace, wisdom, and courage for the next step.\n\n` +
+      `Amen.`;
+    const fallbackEncouragement =
+      `Take a slow breath and return to ${leadVerse?.reference || "scripture"}. ` +
+      `You are not alone, and you can bring this honestly to God.`;
 
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return jsonResponse({
+      topic: aiResult?.topic || topic || seed,
+      emotion: aiResult?.emotion || emotion || null,
+      supportingScriptures: supportingScriptures.slice(0, 7),
+      prayer: aiResult?.prayer || fallbackPrayer,
+      encouragement: aiResult?.encouragement || fallbackEncouragement,
     });
   } catch (e) {
-    console.error("prayer error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return toErrorResponse(e);
   }
 });
