@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,15 +9,20 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import AuthGuard from "./components/AuthGuard";
 import Navbar from "./components/Navbar";
 import Index from "./pages/Index";
-import ChatPage from "./pages/ChatPage";
-import PrayerPage from "./pages/PrayerPage";
-import DashboardPage from "./pages/DashboardPage";
-import DevotionalPage from "./pages/DevotionalPage";
-import VersePage from "./pages/VersePage";
-import ExplorePage from "./pages/ExplorePage";
-import AuthPage from "./pages/AuthPage";
-import SettingsPage from "./pages/SettingsPage";
-import NotFound from "./pages/NotFound";
+
+const ChatPage = lazy(() => import("./pages/ChatPage"));
+const PrayerPage = lazy(() => import("./pages/PrayerPage"));
+const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const DevotionalPage = lazy(() => import("./pages/DevotionalPage"));
+const VersePage = lazy(() => import("./pages/VersePage"));
+const ExplorePage = lazy(() => import("./pages/ExplorePage"));
+const AuthPage = lazy(() => import("./pages/AuthPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
+const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
+const TermsPage = lazy(() => import("./pages/TermsPage"));
+const DisclaimerPage = lazy(() => import("./pages/DisclaimerPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,6 +33,14 @@ const queryClient = new QueryClient({
   },
 });
 
+function PageLoader() {
+  return (
+    <div className="flex min-h-screen items-center justify-center pt-16">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -36,18 +50,24 @@ const App = () => (
         <AuthProvider>
           <ErrorBoundary>
             <Navbar />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/chat" element={<ChatPage />} />
-              <Route path="/prayer" element={<PrayerPage />} />
-              <Route path="/devotional" element={<DevotionalPage />} />
-              <Route path="/dashboard" element={<AuthGuard><DashboardPage /></AuthGuard>} />
-              <Route path="/verse" element={<VersePage />} />
-              <Route path="/explore" element={<ExplorePage />} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/settings" element={<AuthGuard><SettingsPage /></AuthGuard>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/chat" element={<ChatPage />} />
+                <Route path="/prayer" element={<PrayerPage />} />
+                <Route path="/devotional" element={<DevotionalPage />} />
+                <Route path="/dashboard" element={<AuthGuard><DashboardPage /></AuthGuard>} />
+                <Route path="/verse" element={<VersePage />} />
+                <Route path="/explore" element={<ExplorePage />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/settings" element={<AuthGuard><SettingsPage /></AuthGuard>} />
+                <Route path="/privacy" element={<PrivacyPage />} />
+                <Route path="/terms" element={<TermsPage />} />
+                <Route path="/disclaimer" element={<DisclaimerPage />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
           </ErrorBoundary>
         </AuthProvider>
       </BrowserRouter>

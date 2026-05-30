@@ -167,6 +167,19 @@ const Index = () => {
           <p className="font-body text-sm text-muted-foreground">
             Shepherd AI — Scripture-grounded guidance for every season of life.
           </p>
+          <div className="mt-3 flex items-center justify-center gap-4 font-body text-xs text-muted-foreground">
+            <Link to="/privacy" className="hover:text-primary hover:underline">
+              Privacy Policy
+            </Link>
+            <span aria-hidden="true">&middot;</span>
+            <Link to="/terms" className="hover:text-primary hover:underline">
+              Terms of Service
+            </Link>
+            <span aria-hidden="true">&middot;</span>
+            <Link to="/disclaimer" className="hover:text-primary hover:underline">
+              AI Disclaimer
+            </Link>
+          </div>
         </div>
       </footer>
     </div>

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { streamChat } from "@/lib/ai";
-import { detectCrisis } from "@/components/CrisisBanner";
+import { detectCrisis } from "@/lib/crisis";
 import type { ChatMemoryContext } from "@/types/memory";
 
 export type ChatUiMessage = {

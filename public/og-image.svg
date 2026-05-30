@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F5F0E8"/>
+      <stop offset="100%" stop-color="#EDE5D8"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C4923A"/>
+      <stop offset="100%" stop-color="#D4A853"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="60" y="60" width="80" height="80" rx="18" fill="url(#gold)"/>
+  <g transform="translate(77,70)" fill="none" stroke="#FFF8F0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M23 0 C23 0 23 36 23 44"/>
+    <path d="M5 4 C5 4 5 36 5 36 C5 40 10 44 23 44"/>
+    <path d="M41 4 C41 4 41 36 41 36 C41 40 36 44 23 44"/>
+    <path d="M5 4 L23 4 M23 4 L41 4 M5 22 L23 22 M23 22 L41 22"/>
+  </g>
+  <text x="180" y="115" font-family="Georgia, serif" font-size="42" font-weight="bold" fill="#2A3452">Shepherd AI</text>
+  <text x="600" y="340" font-family="Georgia, serif" font-size="56" font-weight="bold" fill="#2A3452" text-anchor="middle">Scripture for Every Season of Life</text>
+  <text x="600" y="400" font-family="system-ui, sans-serif" font-size="24" fill="#6B7A8D" text-anchor="middle">AI-powered Bible companion with personalized guidance and prayers</text>
+</svg>

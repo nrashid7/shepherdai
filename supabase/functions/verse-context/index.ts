@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { handleCors } from "../_shared/cors.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 import { extractToolArguments, generateJson } from "../_shared/ai.ts";
 import { createServiceRoleClient, getAppEnv } from "../_shared/env.ts";
 import { AppError, jsonResponse, toErrorResponse } from "../_shared/errors.ts";
@@ -22,6 +23,9 @@ type VerseContextResponse = {
 serve(async (req) => {
   const corsResp = handleCors(req);
   if (corsResp) return corsResp;
+
+  const rateLimitResp = checkRateLimit(req);
+  if (rateLimitResp) return rateLimitResp;
 
   try {
     const env = getAppEnv();

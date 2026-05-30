@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Sparkles, Bookmark, ExternalLink } from "lucide-react";
@@ -53,29 +53,15 @@ const ChatPage = () => {
     return () => {
       abort();
     };
+    // abort is stable (from useRef) — run only on mount/unmount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Auto-send prompt from query params
-  useEffect(() => {
-    if (initialPromptHandled.current) return;
-    const prompt = searchParams.get("prompt");
-    if (prompt) {
-      initialPromptHandled.current = true;
-      setSearchParams({}, { replace: true });
-      sendMessage(prompt);
-    }
-  }, [searchParams]);
-
-  // Load memories for hint + chat context
-  useEffect(() => {
-    if (user && messages.length === 0) loadMemories();
-  }, [user]);
-
-  const loadMemories = async () => {
+  const loadMemories = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
       .from("user_memories")
@@ -88,7 +74,23 @@ const ChatPage = () => {
       const pick = data[Math.floor(Math.random() * data.length)];
       setMemoryHint(`You've explored ${pick.theme} before with ${pick.verse_reference}. It might encourage you today.`);
     }
-  };
+  }, [user]);
+
+  // Auto-send prompt from query params
+  useEffect(() => {
+    if (initialPromptHandled.current) return;
+    const prompt = searchParams.get("prompt");
+    if (prompt) {
+      initialPromptHandled.current = true;
+      setSearchParams({}, { replace: true });
+      sendMessage(prompt);
+    }
+  }, [searchParams, sendMessage, setSearchParams]);
+
+  // Load memories for hint + chat context
+  useEffect(() => {
+    if (user && messages.length === 0) loadMemories();
+  }, [user, messages.length, loadMemories]);
 
   const saveConversation = async (userMsg: string, response: string) => {
     if (!user) return;

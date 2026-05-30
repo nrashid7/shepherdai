@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BookOpen, Mail, Lock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -99,6 +99,17 @@ const AuthPage = () => {
           >
             {loading ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
           </Button>
+
+          {!isSignUp && (
+            <div className="mt-2 text-right">
+              <Link
+                to="/reset-password"
+                className="font-body text-xs text-muted-foreground hover:text-primary hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          )}
         </form>
 
         <p className="mt-6 text-center font-body text-sm text-muted-foreground">

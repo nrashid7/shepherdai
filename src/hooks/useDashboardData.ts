@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -42,7 +42,7 @@ export function useDashboardData(userId?: string) {
   const [checkinStreak, setCheckinStreak] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!userId) return;
     setIsLoading(true);
     const [versesRes, prayersRes, memoriesRes, convosRes, checkinsRes] = await Promise.all([
@@ -78,13 +78,13 @@ export function useDashboardData(userId?: string) {
       }
     }
     setIsLoading(false);
-  };
+  }, [userId]);
 
   useEffect(() => {
     if (userId) {
       loadData();
     }
-  }, [userId]);
+  }, [userId, loadData]);
 
   return {
     savedVerses,

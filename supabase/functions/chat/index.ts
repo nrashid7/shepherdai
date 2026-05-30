@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { handleCors, corsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit } from "../_shared/rate-limit.ts";
 import { streamText } from "../_shared/ai.ts";
 import { getAppEnv, createServiceRoleClient } from "../_shared/env.ts";
 import { jsonResponse, toErrorResponse } from "../_shared/errors.ts";
@@ -29,6 +30,9 @@ Safety:
 serve(async (req) => {
   const corsResp = handleCors(req);
   if (corsResp) return corsResp;
+
+  const rateLimitResp = checkRateLimit(req, { maxRequests: 10, windowMs: 60_000 });
+  if (rateLimitResp) return rateLimitResp;
 
   try {
     const env = getAppEnv();

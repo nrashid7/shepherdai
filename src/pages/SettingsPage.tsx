@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { User, Moon, Sun, Save } from "lucide-react";
+import { User, Moon, Sun, Save, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -8,20 +9,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const SettingsPage = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("");
   const [saving, setSaving] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains("dark"));
   }, []);
 
-  useEffect(() => {
-    if (user) loadProfile();
-  }, [user]);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
       .from("profiles")
@@ -29,7 +29,11 @@ const SettingsPage = () => {
       .eq("user_id", user.id)
       .single();
     if (data?.display_name) setDisplayName(data.display_name);
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) loadProfile();
+  }, [user, loadProfile]);
 
   const saveProfile = async () => {
     if (!user) return;
@@ -53,7 +57,6 @@ const SettingsPage = () => {
     localStorage.setItem("theme", next ? "dark" : "light");
   };
 
-  // Init theme from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("theme");
     if (saved === "dark") {
@@ -61,6 +64,41 @@ const SettingsPage = () => {
       setIsDark(true);
     }
   }, []);
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No active session");
+
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        },
+      );
+
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({ error: "Deletion failed" }));
+        throw new Error(body.error || "Deletion failed");
+      }
+
+      await signOut();
+      toast.success("Your account and all data have been deleted.");
+      navigate("/");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to delete account";
+      toast.error(message);
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
+  };
 
   if (!user) {
     return (
@@ -102,7 +140,7 @@ const SettingsPage = () => {
           </div>
 
           {/* Appearance */}
-          <div className="rounded-xl border border-border bg-card p-6 shadow-card">
+          <div className="mb-8 rounded-xl border border-border bg-card p-6 shadow-card">
             <h2 className="mb-4 font-display text-lg font-semibold text-foreground">Appearance</h2>
             <button
               onClick={toggleDark}
@@ -114,6 +152,47 @@ const SettingsPage = () => {
               </span>
               <span className="text-xs text-muted-foreground">Click to toggle</span>
             </button>
+          </div>
+
+          {/* Delete Account */}
+          <div className="rounded-xl border border-destructive/30 bg-card p-6 shadow-card">
+            <div className="mb-4 flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              <h2 className="font-display text-lg font-semibold text-foreground">Delete Account</h2>
+            </div>
+            <p className="mb-4 font-body text-sm text-muted-foreground">
+              Permanently delete your account and all associated data including saved verses, prayers,
+              conversations, and devotionals. This action cannot be undone.
+            </p>
+            {!confirmDelete ? (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete My Account
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={deleting}
+                  onClick={handleDeleteAccount}
+                >
+                  {deleting ? "Deleting..." : "Yes, Delete Everything"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={deleting}
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

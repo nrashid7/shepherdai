@@ -11,6 +11,26 @@ interface State {
   error?: Error;
 }
 
+function reportError(error: Error, errorInfo: ErrorInfo) {
+  const payload = {
+    message: error.message,
+    stack: error.stack,
+    componentStack: errorInfo.componentStack,
+    url: window.location.href,
+    userAgent: navigator.userAgent,
+    timestamp: new Date().toISOString(),
+  };
+
+  console.error("ErrorBoundary caught:", payload);
+
+  if (typeof window !== "undefined" && "sendBeacon" in navigator) {
+    const endpoint = import.meta.env.VITE_ERROR_REPORTING_URL;
+    if (endpoint) {
+      navigator.sendBeacon(endpoint, JSON.stringify(payload));
+    }
+  }
+}
+
 class ErrorBoundary extends Component<Props, State> {
   public state: State = { hasError: false };
 
@@ -19,7 +39,7 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("ErrorBoundary caught:", error, errorInfo);
+    reportError(error, errorInfo);
   }
 
   public render() {
