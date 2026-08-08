@@ -23,6 +23,7 @@ const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const DisclaimerPage = lazy(() => import("./pages/DisclaimerPage"));
+const SupportPage = lazy(() => import("./pages/SupportPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -68,6 +69,7 @@ const App = () => (
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="/disclaimer" element={<DisclaimerPage />} />
+                <Route path="/support" element={<SupportPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
