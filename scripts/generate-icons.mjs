@@ -36,6 +36,7 @@ async function main() {
 
   await sharp(svgBuffer)
     .resize(1024, 1024)
+    .flatten({ background: "#C4923A" })
     .png()
     .toFile(resolve(iconDir, "AppIcon-512@2x.png"));
 
