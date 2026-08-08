@@ -26,11 +26,7 @@ serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
-    const supabaseUser = createClient(supabaseUrl, token, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !user) {
       return new Response(
         JSON.stringify({ error: "Invalid or expired session" }),

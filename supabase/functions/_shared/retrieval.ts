@@ -155,7 +155,12 @@ export async function getRelevantVersesForTheme(
 ): Promise<Array<{ reference: string; text: string; theme: string }>> {
   const seed = theme.toLowerCase().trim();
   const hints = THEME_HINTS[seed] || [];
-  const query = [seed, ...hints].join(" ");
+  // websearch_to_tsquery treats whitespace as AND, which makes a theme plus
+  // several synonyms too restrictive. Match any curated theme term instead.
+  const query = [seed, ...hints]
+    .filter(Boolean)
+    .map((term) => `"${term.replaceAll('"', "")}"`)
+    .join(" OR ");
   const verses = await searchVersesByQuery(sb, query, { limit: options?.limit ?? 7 });
   return verses.map((v) => ({
     reference: toReference(v.book, v.chapter, v.verse_number),

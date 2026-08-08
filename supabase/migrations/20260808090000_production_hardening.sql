@@ -48,9 +48,7 @@ create policy "saved_devotionals_all_owner" on public.saved_devotionals for all 
 -- These functions exist only for database triggers and must not be callable via the API.
 revoke all on function public.handle_new_user() from public, anon, authenticated;
 revoke all on function public.update_updated_at_column() from public, anon, authenticated;
+revoke all on function public.rls_auto_enable() from public, anon, authenticated;
 
 -- Make reference-table access explicit and immutable for API roles.
 revoke insert, update, delete, truncate on public.bible_verses, public.cross_references, public.study_notes from anon, authenticated;
-
-create index if not exists bible_verses_embedding_hnsw_idx
-  on public.bible_verses using hnsw (embedding vector_cosine_ops);

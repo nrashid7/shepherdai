@@ -15,7 +15,7 @@
    - `https://shepherdai.app/reset-password`
    - `com.shepherdai.app://auth/callback`
 3. Set Edge Function secrets: `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`, `OPENROUTER_HTTP_REFERER`, `OPENROUTER_X_TITLE`, `MODEL_CHAT`, `MODEL_PRAYER`, `MODEL_DEVOTIONAL`, `MODEL_VERSE_CONTEXT`, `OPENROUTER_EMBEDDING_MODEL`, `AI_REQUEST_TIMEOUT_MS`, and `AI_REQUEST_MAX_RETRIES`.
-4. Run `npm run seed:data`, `npm run seed:embeddings`, and `npm run seed:validate` with `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and (for embeddings) `OPENROUTER_API_KEY` set only in the administrative shell.
+4. Run `npm run seed:data`, `npm run seed:embeddings`, and `npm run seed:validate` with `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and (for embeddings) `OPENROUTER_API_KEY` set only in the administrative shell. After validation, apply `supabase/post-seed/001_embedding_index.sql`.
 5. Deploy exactly: `chat`, `prayer`, `devotional`, `verse-context`, and `delete-account`.
 6. Generate TypeScript types, run `supabase/tests/rls.sql`, and review both security and performance advisors.
 
