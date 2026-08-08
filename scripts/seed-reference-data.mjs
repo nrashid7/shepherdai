@@ -65,7 +65,7 @@ async function requestEmbeddings(input) {
       const response = await fetch("https://openrouter.ai/api/v1/embeddings", {
         method: "POST",
         signal: controller.signal,
-        headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`, "Content-Type": "application/json", "HTTP-Referer": "https://shepherdai.app", "X-Title": "Shepherd AI" },
+        headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`, "Content-Type": "application/json", "HTTP-Referer": "https://shepherdai-beta.vercel.app", "X-Title": "Shepherd AI" },
         body: JSON.stringify({ model, dimensions: 768, input }),
       });
       if (response.ok) return response.json();

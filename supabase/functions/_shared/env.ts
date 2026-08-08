@@ -38,7 +38,7 @@ export function getAppEnv(): AppEnv {
   return {
     openRouterApiKey: requireEnv("OPENROUTER_API_KEY"),
     openRouterBaseUrl: Deno.env.get("OPENROUTER_BASE_URL") || "https://openrouter.ai/api/v1/chat/completions",
-    openRouterReferer: Deno.env.get("OPENROUTER_HTTP_REFERER") || "https://shepherdai.app",
+    openRouterReferer: Deno.env.get("OPENROUTER_HTTP_REFERER") || "https://shepherdai-beta.vercel.app",
     openRouterTitle: Deno.env.get("OPENROUTER_X_TITLE") || "Shepherd AI",
     supabaseUrl: requireEnv("SUPABASE_URL"),
     supabaseServiceRoleKey: requireEnv("SUPABASE_SERVICE_ROLE_KEY"),

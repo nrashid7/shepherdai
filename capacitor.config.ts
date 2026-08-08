@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.shepherdai.app",
+  appId: "com.nrashid7.shepherdai",
   appName: "Shepherd AI",
   webDir: "dist",
   server: {

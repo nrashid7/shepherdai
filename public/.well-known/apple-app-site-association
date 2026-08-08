@@ -1,8 +1,24 @@
 {
   "applinks": {
-    "details": []
+    "details": [
+      {
+        "appIDs": [
+          "4P84ANXDP7.com.nrashid7.shepherdai"
+        ],
+        "components": [
+          {
+            "/": "/auth/*"
+          },
+          {
+            "/": "/reset-password*"
+          }
+        ]
+      }
+    ]
   },
   "webcredentials": {
-    "apps": []
+    "apps": [
+      "4P84ANXDP7.com.nrashid7.shepherdai"
+    ]
   }
 }

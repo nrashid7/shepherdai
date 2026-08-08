@@ -2,7 +2,7 @@
 
 The production iOS target is the checked-in Capacitor project under `ios/`.
 
-- Bundle ID: `com.shepherdai.app`
+- Bundle ID: `com.nrashid7.shepherdai`
 - Display name: `Shepherd AI`
 - Release: `1.0.0`
 - Minimum iOS: 15
