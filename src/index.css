@@ -15,14 +15,14 @@
     --popover: 40 30% 98%;
     --popover-foreground: 220 30% 18%;
 
-    --primary: 36 60% 50%;
+    --primary: 36 70% 35%;
     --primary-foreground: 40 33% 98%;
 
     --secondary: 40 20% 90%;
     --secondary-foreground: 220 30% 18%;
 
     --muted: 40 15% 92%;
-    --muted-foreground: 220 15% 50%;
+    --muted-foreground: 220 15% 43%;
 
     --accent: 36 45% 60%;
     --accent-foreground: 220 30% 18%;
@@ -32,21 +32,21 @@
 
     --border: 36 20% 88%;
     --input: 36 20% 88%;
-    --ring: 36 60% 50%;
+    --ring: 36 70% 35%;
 
     --radius: 0.75rem;
 
     --sidebar-background: 40 25% 95%;
     --sidebar-foreground: 220 30% 18%;
-    --sidebar-primary: 36 60% 50%;
+    --sidebar-primary: 36 70% 35%;
     --sidebar-primary-foreground: 40 33% 98%;
     --sidebar-accent: 40 20% 90%;
     --sidebar-accent-foreground: 220 30% 18%;
     --sidebar-border: 36 20% 88%;
-    --sidebar-ring: 36 60% 50%;
+    --sidebar-ring: 36 70% 35%;
 
     /* Custom tokens */
-    --gold: 36 60% 50%;
+    --gold: 36 70% 35%;
     --gold-light: 40 50% 75%;
     --gold-glow: 36 70% 60%;
     --cream: 40 33% 96%;
@@ -58,7 +58,7 @@
     --font-display: 'Playfair Display', Georgia, serif;
     --font-body: 'Inter', system-ui, sans-serif;
 
-    --gradient-gold: linear-gradient(135deg, hsl(36 60% 50%), hsl(36 70% 60%));
+    --gradient-gold: linear-gradient(135deg, hsl(36 70% 35%), hsl(40 70% 34%));
     --gradient-warm: linear-gradient(180deg, hsl(40 33% 96%), hsl(40 30% 92%));
     --shadow-soft: 0 4px 20px -4px hsl(36 60% 50% / 0.15);
     --shadow-card: 0 2px 12px -2px hsl(220 30% 18% / 0.08);
