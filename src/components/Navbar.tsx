@@ -93,11 +93,19 @@ const Navbar = () => {
           {/* Mobile: only show auth button in top bar */}
           <div className="flex items-center gap-1 md:hidden">
             {user ? (
-              <button onClick={handleSignOut} className="rounded-lg p-2 text-muted-foreground hover:text-foreground">
+              <button
+                onClick={handleSignOut}
+                aria-label="Sign out"
+                className="rounded-lg p-2 text-muted-foreground hover:text-foreground"
+              >
                 <LogOut className="h-5 w-5" />
               </button>
             ) : (
-              <Link to="/auth" className="rounded-lg p-2 text-muted-foreground hover:text-foreground">
+              <Link
+                to="/auth"
+                aria-label="Sign in"
+                className="rounded-lg p-2 text-muted-foreground hover:text-foreground"
+              >
                 <LogIn className="h-5 w-5" />
               </Link>
             )}
