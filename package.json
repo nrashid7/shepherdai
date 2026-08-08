@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "type": "module",
   "scripts": {
@@ -20,6 +20,7 @@
     "cap:build": "npm run build && npx cap sync ios",
     "cap:open": "npx cap open ios",
     "seed:check": "node scripts/verify-reference-assets.mjs",
+    "seed:sql": "node scripts/generate-seed-sql.mjs",
     "seed:data": "node scripts/seed-reference-data.mjs data",
     "seed:embeddings": "node scripts/seed-reference-data.mjs embeddings",
     "seed:validate": "node scripts/seed-reference-data.mjs validate"

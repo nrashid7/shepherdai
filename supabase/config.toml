@@ -1,5 +1,4 @@
-# Set by `supabase link --project-ref <production-ref>` during provisioning.
-project_id = "shepherd-ai-production"
+project_id = "hqmbvfkhvtjmvozbgezs"
 
 [functions.chat]
 verify_jwt = true
