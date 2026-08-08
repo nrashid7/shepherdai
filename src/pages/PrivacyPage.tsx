@@ -22,7 +22,7 @@ const PrivacyPage = () => {
         </h1>
 
         <div className="prose prose-sm max-w-none font-body text-foreground dark:prose-invert">
-          <p className="text-muted-foreground">Last updated: May 2026</p>
+          <p className="text-muted-foreground">Last updated: August 2026</p>
 
           <h2 className="font-display">1. Information We Collect</h2>
           <p>
@@ -62,8 +62,10 @@ const PrivacyPage = () => {
             </li>
             <li>
               <strong>OpenRouter</strong> — AI model gateway for generating
-              responses (your messages are sent to AI models for processing but
-              are not retained by the AI providers for training)
+              responses. Your messages are transmitted to OpenRouter and a
+              model provider for processing. OpenRouter does not store prompt
+              or response content by default; model-provider retention and
+              training practices can vary by provider.
             </li>
           </ul>
 
@@ -106,9 +108,9 @@ const PrivacyPage = () => {
 
           <h2 className="font-display">9. Contact</h2>
           <p>
-            For privacy questions or data requests, please contact us at the
-            email address provided in the app settings or through our support
-            channels.
+            For privacy questions or data requests, email{" "}
+            <a href="mailto:nr.rashid7@gmail.com">nr.rashid7@gmail.com</a> or
+            visit our <Link to="/support">support page</Link>.
           </p>
 
           <h2 className="font-display">10. Changes to This Policy</h2>

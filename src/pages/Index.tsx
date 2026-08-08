@@ -179,6 +179,10 @@ const Index = () => {
             <Link to="/disclaimer" className="hover:text-primary hover:underline">
               AI Disclaimer
             </Link>
+            <span aria-hidden="true">&middot;</span>
+            <Link to="/support" className="hover:text-primary hover:underline">
+              Support
+            </Link>
           </div>
         </div>
       </footer>

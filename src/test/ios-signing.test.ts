@@ -37,3 +37,24 @@ describe("iOS export compliance", () => {
     );
   });
 });
+
+describe("iOS device support", () => {
+  it("ships as an iPhone app until the iPad experience is tested", () => {
+    const project = readFileSync("ios/App/App.xcodeproj/project.pbxproj", "utf8");
+
+    expect(project).not.toContain('TARGETED_DEVICE_FAMILY = "1,2";');
+    expect(project.match(/TARGETED_DEVICE_FAMILY = 1;/g)).toHaveLength(2);
+  });
+});
+
+describe("iOS privacy manifest", () => {
+  it("declares the account and user content collected for app functionality", () => {
+    const manifest = readFileSync("ios/App/App/PrivacyInfo.xcprivacy", "utf8");
+
+    expect(manifest).toContain("NSPrivacyCollectedDataTypeEmailAddress");
+    expect(manifest).toContain("NSPrivacyCollectedDataTypeUserID");
+    expect(manifest).toContain("NSPrivacyCollectedDataTypeOtherUserContent");
+    expect(manifest).toContain("NSPrivacyCollectedDataTypeSensitiveInfo");
+    expect(manifest).toContain("NSPrivacyCollectedDataTypePurposeAppFunctionality");
+  });
+});

@@ -35,5 +35,6 @@ Database Files/
 supabase/seed/.checkpoint.json
 .seed-sql/
 .apple-signing/
+.worktrees/
 
 .vercel

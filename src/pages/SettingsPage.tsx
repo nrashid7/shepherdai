@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { User, Moon, Sun, Save, Trash2 } from "lucide-react";
+import { User, Moon, Sun, Save, Trash2, LifeBuoy } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -152,6 +152,21 @@ const SettingsPage = () => {
               </span>
               <span className="text-xs text-muted-foreground">Click to toggle</span>
             </button>
+          </div>
+
+          {/* Support */}
+          <div className="mb-8 rounded-xl border border-border bg-card p-6 shadow-card">
+            <div className="mb-3 flex items-center gap-2">
+              <LifeBuoy className="h-5 w-5 text-primary" />
+              <h2 className="font-display text-lg font-semibold text-foreground">Support</h2>
+            </div>
+            <p className="font-body text-sm text-muted-foreground">
+              Need help? Email{" "}
+              <a className="text-primary hover:underline" href="mailto:nr.rashid7@gmail.com">
+                nr.rashid7@gmail.com
+              </a>{" "}
+              or visit the <a className="text-primary hover:underline" href="/support">support page</a>.
+            </p>
           </div>
 
           {/* Delete Account */}
