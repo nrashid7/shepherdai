@@ -14,7 +14,7 @@ export async function handleAuthCallbackUrl(url: string, auth: AuthCodeExchanger
 
 export function getAuthCallbackPath(url: string): string {
   const callback = new URL(url);
-  const nativePath = callback.protocol === "com.shepherdai.app:"
+  const nativePath = callback.protocol === "com.nrashid7.shepherdai:"
     ? `/${callback.hostname}${callback.pathname}`
     : callback.pathname;
   const path = nativePath.replace(/\/$/, "");

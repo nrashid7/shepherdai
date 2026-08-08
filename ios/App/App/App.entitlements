@@ -4,8 +4,8 @@
 <dict>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>applinks:shepherdai.app</string>
-		<string>webcredentials:shepherdai.app</string>
+		<string>applinks:shepherdai-beta.vercel.app</string>
+		<string>webcredentials:shepherdai-beta.vercel.app</string>
 	</array>
 </dict>
 </plist>

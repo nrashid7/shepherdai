@@ -1,2 +1,2 @@
-app_identifier("com.shepherdai.app")
+app_identifier("com.nrashid7.shepherdai")
 team_id(ENV["APPLE_TEAM_ID"])

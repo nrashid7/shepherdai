@@ -3,14 +3,6 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "redirects": [
-    {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "www.shepherdai.app" }],
-      "destination": "https://shepherdai.app/:path*",
-      "permanent": true
-    }
-  ],
   "headers": [
     {
       "source": "/.well-known/apple-app-site-association",

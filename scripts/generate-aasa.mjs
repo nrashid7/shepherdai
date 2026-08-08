@@ -9,7 +9,7 @@ if (!teamId) {
 mkdirSync("public/.well-known", { recursive: true });
 writeFileSync("public/.well-known/apple-app-site-association", JSON.stringify({
   applinks: {
-    details: [{ appIDs: [`${teamId}.com.shepherdai.app`], components: [{ "/": "/auth/*" }, { "/": "/reset-password*" }] }],
+    details: [{ appIDs: [`${teamId}.com.nrashid7.shepherdai`], components: [{ "/": "/auth/*" }, { "/": "/reset-password*" }] }],
   },
-  webcredentials: { apps: [`${teamId}.com.shepherdai.app`] },
-}, null, 2));
+  webcredentials: { apps: [`${teamId}.com.nrashid7.shepherdai`] },
+}, null, 2) + "\n");

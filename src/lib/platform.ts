@@ -11,12 +11,12 @@ export function isNativeApp(): boolean {
  */
 export function getAuthRedirectUrl(): string {
   if (isNativeApp()) {
-    return "com.shepherdai.app://auth/callback";
+    return "com.nrashid7.shepherdai://auth/callback";
   }
   return `${window.location.origin}/auth/callback`;
 }
 
 export function getPasswordResetRedirectUrl(): string {
-  if (isNativeApp()) return "com.shepherdai.app://auth/callback?type=recovery&next=reset-password";
+  if (isNativeApp()) return "com.nrashid7.shepherdai://auth/callback?type=recovery&next=reset-password";
   return `${window.location.origin}/reset-password?type=recovery`;
 }
