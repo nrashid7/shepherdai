@@ -27,3 +27,13 @@ describe("iOS App Store icon", () => {
     });
   });
 });
+
+describe("iOS export compliance", () => {
+  it("declares that the app does not use non-exempt encryption", () => {
+    const infoPlist = readFileSync("ios/App/App/Info.plist", "utf8");
+
+    expect(infoPlist).toMatch(
+      /<key>ITSAppUsesNonExemptEncryption<\/key>\s*<false\/>/,
+    );
+  });
+});
