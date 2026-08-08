@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "translation": "WEB",
+  "counts": {
+    "bible_verses": 31102,
+    "old_testament": 23145,
+    "new_testament": 7957,
+    "cross_references": 341542,
+    "study_notes": 765
+  },
+  "sha256": {
+    "bible_verses.csv.gz": "2cf4e1c46771e8c6b238598a4fe969532ae211d9b56a761963faa2571cebca83",
+    "cross_references.csv.gz": "bd24f536b6d8ffac7b475f02c03458505c89ee2d57eed217b17d609e56768a53",
+    "study_notes.csv.gz": "aec3143eb48be438b17fd95d8b9f594572e71b1f09a4a9200a4e9b80bd77fd8b"
+  }
+}

@@ -34,18 +34,31 @@ export const THEME_HINTS: Record<string, string[]> = {
 
 export async function findVerseByReference(sb: SupabaseClient, reference: string): Promise<BibleVerse | null> {
   const parsed = parseReference(reference);
-  const { data, error } = await sb
-    .from("bible_verses")
-    .select("id, book, chapter, verse_number, text")
-    .ilike("book", parsed.book)
-    .eq("chapter", parsed.chapter)
-    .eq("verse_number", parsed.verse)
-    .maybeSingle();
-
-  if (error) {
-    throw new AppError(500, "verse_lookup_failed", "Failed to retrieve verse from scripture store", error);
+  if (parsed.endChapter === undefined || parsed.endVerse === undefined) {
+    const { data, error } = await sb
+      .from("bible_verses")
+      .select("id, book, chapter, verse_number, text")
+      .ilike("book", parsed.book)
+      .eq("chapter", parsed.chapter)
+      .eq("verse_number", parsed.verse)
+      .maybeSingle();
+    if (error) throw new AppError(500, "verse_lookup_failed", "Failed to retrieve verse from scripture store", error);
+    return data;
   }
-  return data;
+
+  const passage: BibleVerse[] = [];
+  for (let chapter = parsed.chapter; chapter <= parsed.endChapter; chapter += 1) {
+    let query = sb.from("bible_verses").select("id, book, chapter, verse_number, text")
+      .ilike("book", parsed.book).eq("chapter", chapter).order("verse_number", { ascending: true });
+    if (chapter === parsed.chapter) query = query.gte("verse_number", parsed.verse);
+    if (chapter === parsed.endChapter) query = query.lte("verse_number", parsed.endVerse);
+    const { data, error } = await query;
+    if (error) throw new AppError(500, "verse_lookup_failed", "Failed to retrieve scripture range", error);
+    passage.push(...(data || []));
+    if (passage.length > 200) throw new AppError(400, "reference_range_too_large", "Verse ranges are limited to 200 verses");
+  }
+  if (!passage.length) return null;
+  return { ...passage[0], text: passage.map((item) => item.text).join(" ") };
 }
 
 export async function getSurroundingPassage(

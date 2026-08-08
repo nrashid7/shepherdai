@@ -17,7 +17,7 @@ AI-powered Bible companion that provides scripture-grounded guidance, personaliz
 
 ## Local Development
 
-Prerequisites: Node.js 18+ and npm.
+Prerequisites: Node.js 22+ and npm.
 
 ```sh
 # Install dependencies
@@ -44,8 +44,7 @@ Edge Functions require these secrets (set in Supabase Dashboard > Edge Functions
 
 | Secret | Used by |
 |---|---|
-| `OPENROUTER_API_KEY` | chat, prayer, devotional, verse-context, seed-study-notes-ai |
-| `ADMIN_SECRET` | embed-bible, seed-bible, seed-cross-refs, seed-study-notes, seed-study-notes-ai |
+| `OPENROUTER_API_KEY` | chat, prayer, devotional, verse-context |
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are automatically injected by Supabase for hosted Edge Functions.
 
@@ -72,15 +71,7 @@ Deployed to Supabase. User-facing functions require a valid JWT (`verify_jwt = t
 | `devotional` | `MODEL_DEVOTIONAL` -> `anthropic/claude-haiku-4.5` | required |
 | `verse-context` | `MODEL_VERSE_CONTEXT` -> `google/gemini-3-flash-preview` | required |
 
-Admin/seed functions use `X-Admin-Secret` header auth (`verify_jwt = false`):
-
-| Function | Purpose |
-|---|---|
-| `seed-bible` | Import KJV Bible text from GitHub |
-| `seed-cross-refs` | Import cross-references |
-| `seed-study-notes` | Import study notes |
-| `seed-study-notes-ai` | Generate study notes via AI |
-| `embed-bible` | Seed/manage bible verse data |
+Reference data is rebuilt with resumable local administrative scripts, never public Edge Functions. Run `npm run seed:check` to verify tracked assets and checksums. See [the production runbook](docs/PRODUCTION_RUNBOOK.md) for deployment, seeding, TestFlight, and cutover steps.
 
 ## Project Structure
 

@@ -5,6 +5,7 @@ import { BookOpen, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { getPasswordResetRedirectUrl } from "@/lib/platform";
 import { toast } from "sonner";
 
 type Mode = "request" | "update";
@@ -33,7 +34,7 @@ const ResetPasswordPage = () => {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password?type=recovery`,
+        redirectTo: getPasswordResetRedirectUrl(),
       });
       if (error) throw error;
       toast.success("Check your email for a password reset link.");

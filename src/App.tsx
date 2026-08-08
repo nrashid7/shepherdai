@@ -8,6 +8,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import AuthGuard from "./components/AuthGuard";
 import Navbar from "./components/Navbar";
+import OfflineBanner from "./components/OfflineBanner";
 import Index from "./pages/Index";
 
 const ChatPage = lazy(() => import("./pages/ChatPage"));
@@ -50,6 +51,7 @@ const App = () => (
         <AuthProvider>
           <ErrorBoundary>
             <Navbar />
+            <OfflineBanner />
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/" element={<Index />} />
@@ -60,6 +62,7 @@ const App = () => (
                 <Route path="/verse" element={<VersePage />} />
                 <Route path="/explore" element={<ExplorePage />} />
                 <Route path="/auth" element={<AuthPage />} />
+                <Route path="/auth/callback" element={<AuthPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/settings" element={<AuthGuard><SettingsPage /></AuthGuard>} />
                 <Route path="/privacy" element={<PrivacyPage />} />

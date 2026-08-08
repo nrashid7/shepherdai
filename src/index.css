@@ -100,9 +100,19 @@
     @apply border-border;
   }
 
+  html {
+    /* Ensure the web view background extends behind the notch / home indicator */
+    background-color: hsl(var(--background));
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
+    /* Pad content away from iOS safe areas (notch, home indicator, status bar) */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 
   h1, h2, h3, h4, h5, h6 {

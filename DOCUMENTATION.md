@@ -606,7 +606,7 @@ Provides:
 
 | Secret | Purpose | Used By |
 |--------|---------|---------|
-| `OPENROUTER_API_KEY` | OpenRouter API authentication | chat, prayer, devotional, verse-context, seed-study-notes-ai |
+| `OPENROUTER_API_KEY` | OpenRouter API authentication | chat, prayer, devotional, verse-context |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-side DB access (bypasses RLS) | chat (for RAG queries) |
 | `SUPABASE_URL` | Supabase URL (auto-available in edge functions) | chat |
 

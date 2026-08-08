@@ -4,10 +4,12 @@ export type ParsedReference = {
   book: string;
   chapter: number;
   verse: number;
+  endChapter?: number;
+  endVerse?: number;
   raw: string;
 };
 
-const referenceRegex = /^([1-3]?\s?[A-Za-z]+(?:\s[A-Za-z]+)*)\s+(\d+):(\d+)$/;
+const referenceRegex = /^([1-3]?\s?[A-Za-z]+(?:\s[A-Za-z]+)*)\s+(\d+):(\d+)(?:-(?:(\d+):)?(\d+))?$/;
 
 export function normalizeBookName(input: string): string {
   return input.trim().replace(/\s+/g, " ");
@@ -22,7 +24,11 @@ export function parseReference(reference: string): ParsedReference {
 
   const chapter = Number(match[2]);
   const verse = Number(match[3]);
-  if (chapter <= 0 || verse <= 0) {
+  const endChapter = match[5] ? Number(match[4] || match[2]) : undefined;
+  const endVerse = match[5] ? Number(match[5]) : undefined;
+  const rangeIsReversed = endChapter !== undefined && endVerse !== undefined &&
+    (endChapter < chapter || (endChapter === chapter && endVerse < verse));
+  if (chapter <= 0 || verse <= 0 || endChapter === 0 || endVerse === 0 || rangeIsReversed) {
     throw new AppError(400, "invalid_reference", `Invalid verse reference: "${reference}"`);
   }
 
@@ -30,6 +36,8 @@ export function parseReference(reference: string): ParsedReference {
     book: normalizeBookName(match[1]),
     chapter,
     verse,
+    ...(endChapter !== undefined ? { endChapter } : {}),
+    ...(endVerse !== undefined ? { endVerse } : {}),
     raw: trimmed,
   };
 }

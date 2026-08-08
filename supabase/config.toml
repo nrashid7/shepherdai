@@ -1,4 +1,5 @@
-project_id = "hqmbvfkhvtjmvozbgezs"
+# Set by `supabase link --project-ref <production-ref>` during provisioning.
+project_id = "shepherd-ai-production"
 
 [functions.chat]
 verify_jwt = true
@@ -12,20 +13,5 @@ verify_jwt = true
 [functions.verse-context]
 verify_jwt = true
 
-[functions.embed-bible]
-verify_jwt = false
-
-[functions.seed-bible]
-verify_jwt = false
-
-[functions.seed-cross-refs]
-verify_jwt = false
-
-[functions.seed-study-notes]
-verify_jwt = false
-
 [functions.delete-account]
 verify_jwt = true
-
-[functions.seed-study-notes-ai]
-verify_jwt = false

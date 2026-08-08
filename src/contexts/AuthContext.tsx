@@ -1,6 +1,9 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { getAuthRedirectUrl, isNativeApp } from "@/lib/platform";
+import { getAuthCallbackPath, handleAuthCallbackUrl } from "@/lib/auth-callback";
+import { App as CapApp, type URLOpenListenerEvent } from "@capacitor/app";
 
 interface AuthContextType {
   user: User | null;
@@ -31,7 +34,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    const exchangeCallback = (url: string) => {
+      void handleAuthCallbackUrl(url, supabase.auth).catch((error) => {
+        console.error("Unable to complete authentication callback", error);
+      });
+    };
+
+    exchangeCallback(window.location.href);
+
+    let deepLinkCleanup: (() => void) | undefined;
+    if (isNativeApp()) {
+      const handle = CapApp.addListener("appUrlOpen", (event: URLOpenListenerEvent) => {
+        if (!event.url) return;
+        void handleAuthCallbackUrl(event.url, supabase.auth).then((completed) => {
+          if (!completed) return;
+          window.history.replaceState({}, "", getAuthCallbackPath(event.url));
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }).catch((error) => console.error("Unable to complete native authentication callback", error));
+      });
+
+      deepLinkCleanup = () => { handle.then(h => h.remove()); };
+    }
+
+    return () => {
+      subscription.unsubscribe();
+      deepLinkCleanup?.();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, displayName?: string) => {
@@ -40,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       password,
       options: {
         data: { display_name: displayName },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: getAuthRedirectUrl(),
       },
     });
     if (error) throw error;
