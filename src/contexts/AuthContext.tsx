@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { getAuthRedirectUrl, isNativeApp } from "@/lib/platform";
+import { App as CapApp, type URLOpenListenerEvent } from "@capacitor/app";
 
 interface AuthContextType {
   user: User | null;
@@ -31,7 +33,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    // On native iOS, listen for deep link opens (e.g. email confirmation redirects)
+    // and extract the token fragment so Supabase can complete the auth flow.
+    let deepLinkCleanup: (() => void) | undefined;
+    if (isNativeApp()) {
+      const handle = CapApp.addListener("appUrlOpen", (event: URLOpenListenerEvent) => {
+        const url = event.url;
+        if (!url) return;
+
+        // Supabase appends auth tokens as a URL fragment: #access_token=...&refresh_token=...
+        const hashIndex = url.indexOf("#");
+        if (hashIndex === -1) return;
+
+        const fragment = url.substring(hashIndex + 1);
+        const params = new URLSearchParams(fragment);
+        const accessToken = params.get("access_token");
+        const refreshToken = params.get("refresh_token");
+
+        if (accessToken && refreshToken) {
+          supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        }
+      });
+
+      deepLinkCleanup = () => { handle.then(h => h.remove()); };
+    }
+
+    return () => {
+      subscription.unsubscribe();
+      deepLinkCleanup?.();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, displayName?: string) => {
@@ -40,7 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       password,
       options: {
         data: { display_name: displayName },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: getAuthRedirectUrl(),
       },
     });
     if (error) throw error;

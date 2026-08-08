@@ -25,8 +25,8 @@ const Navbar = () => {
 
   return (
     <>
-      {/* Top navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
+      {/* Top navbar — pt accounts for iOS status bar / notch */}
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)]">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-gold">
@@ -105,8 +105,8 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* Mobile bottom tab bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur-md md:hidden">
+      {/* Mobile bottom tab bar — pb accounts for iOS home indicator */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur-md md:hidden pb-[env(safe-area-inset-bottom)]">
         <div className="flex items-center justify-around px-2 py-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
