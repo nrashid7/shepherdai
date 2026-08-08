@@ -13,5 +13,10 @@ export function getAuthRedirectUrl(): string {
   if (isNativeApp()) {
     return "com.shepherdai.app://auth/callback";
   }
-  return window.location.origin;
+  return `${window.location.origin}/auth/callback`;
+}
+
+export function getPasswordResetRedirectUrl(): string {
+  if (isNativeApp()) return "com.shepherdai.app://auth/callback?type=recovery&next=reset-password";
+  return `${window.location.origin}/reset-password?type=recovery`;
 }

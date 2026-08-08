@@ -32,3 +32,4 @@ dist-ssr
 .cursor/
 supabase/.temp/
 Database Files/
+supabase/seed/.checkpoint.json
